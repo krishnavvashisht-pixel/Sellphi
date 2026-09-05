@@ -1,0 +1,1 @@
+"""Sellphi backend application package."""
