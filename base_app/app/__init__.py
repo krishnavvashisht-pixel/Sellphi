@@ -1,1 +1,1 @@
-"""Sellphi backend application package."""
+"""Memory abstractions for future AI agents."""

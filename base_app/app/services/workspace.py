@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from uuid import UUID
 
@@ -6,7 +8,7 @@ from app.core.exceptions import (
     EntityConflictError,
     EntityNotFoundError,
 )
-from app.models.workspace import Workspace, WorkspaceStatus
+from app.models.workspace import Workspace, WorkspacePlan, WorkspaceStatus
 from app.repositories.workspace import WorkspaceRepository
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate
 from app.utils.time import utc_now
@@ -36,6 +38,7 @@ class WorkspaceService:
         self._validate_status_transition(None, payload.status)
 
         workspace = Workspace(
+            owner_id=payload.owner_id,
             name=payload.name,
             slug=slug,
             plan=payload.plan,
@@ -54,6 +57,40 @@ class WorkspaceService:
 
     async def list(self, *, offset: int = 0, limit: int = 100) -> list[Workspace]:
         return await self._repository.list(offset=offset, limit=limit)
+
+    async def list_by_owner(self, owner_id: UUID) -> list[Workspace]:
+        return await self._repository.list_by_owner(owner_id)
+
+    async def get_or_create_default_for_user(self, user_id: UUID, user_email: str) -> Workspace:
+        workspaces = await self._repository.list_by_owner(user_id)
+        if workspaces:
+            return workspaces[0]
+
+        # Auto-create personal workspace
+        base_name = user_email.split("@")[0].replace(".", " ").title()
+        name = f"{base_name}'s Workspace"
+        raw_slug = f"{user_email.split('@')[0].lower().replace('.', '-')}-workspace"
+        slug = self._normalize_slug(raw_slug)
+
+        existing = await self._repository.get_by_slug(slug)
+        if existing:
+            slug = f"{slug}-{str(user_id)[:6]}"
+
+        workspace = Workspace(
+            owner_id=user_id,
+            name=name,
+            slug=slug,
+            plan=WorkspacePlan.FREE,
+            status=WorkspaceStatus.ACTIVE,
+            settings={},
+        )
+        try:
+            created = await self._repository.create(workspace)
+            await self._repository.commit()
+            return created
+        except Exception:
+            await self._repository.rollback()
+            raise
 
     async def get(self, workspace_id: UUID) -> Workspace:
         workspace = await self._repository.get_by_id(workspace_id)

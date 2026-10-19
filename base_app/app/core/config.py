@@ -25,9 +25,26 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
 
-    jwt_secret_key: SecretStr = SecretStr("change-me-in-production")
+    # Optional (not required at startup like the JWT secrets): plenty of the
+    # app — mission fixtures, auth, the admin page — works fine with no
+    # Gemini key configured at all. app/llm_client.py raises a clear error
+    # only when something actually tries to call Gemini without one.
+    gemini_api_key: SecretStr | None = None
+    # "Flash tier" per the build plan. Google's Flash model lineup rotates
+    # every few months with real shutdown dates — check
+    # https://ai.google.dev/gemini-api/docs/models before assuming this is
+    # still current, and update here (one place) rather than in every module.
+    gemini_model: str = "gemini-3.5-flash"
+
+    # No default: pydantic-settings raises a ValidationError on startup if either
+    # secret is missing from the environment. Access and refresh tokens are signed
+    # with different keys so a leaked refresh secret can't be used to forge access
+    # tokens and vice versa.
+    jwt_access_secret_key: SecretStr
+    jwt_refresh_secret_key: SecretStr
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
+    jwt_refresh_token_expire_minutes: int = 60 * 24 * 14
     jwt_issuer: str = "sellphi"
 
     model_config = SettingsConfigDict(

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sellphi — Log in</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="card">
+    <div class="tabs">
+      <button id="tab-login" class="active" type="button">Log in</button>
+      <button id="tab-signup" type="button">Sign up</button>
+    </div>
+
+    <h1 id="heading">Welcome back</h1>
+    <p class="subtitle" id="subtitle">Log in to your Sellphi account.</p>
+
+    <div id="message" class="message"></div>
+
+    <form id="form">
+      <label for="email">Email</label>
+      <input id="email" type="email" required autocomplete="email" />
+
+      <label for="password">Password</label>
+      <input id="password" type="password" required autocomplete="current-password" minlength="8" />
+
+      <button id="submit" type="submit">Log in</button>
+    </form>
+    <div style="margin-top:20px; text-align:center;">
+      <a href="/dashboard" style="color:var(--accent); text-decoration:none; font-size:13px; font-weight:600;">⚡ Open AI SDR Dashboard directly &rarr;</a>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let mode = "login"; // or "signup"
+
+    const heading = document.getElementById("heading");
+    const subtitle = document.getElementById("subtitle");
+    const submitButton = document.getElementById("submit");
+    const messageBox = document.getElementById("message");
+    const tabLogin = document.getElementById("tab-login");
+    const tabSignup = document.getElementById("tab-signup");
+    const passwordInput = document.getElementById("password");
+
+    function showMessage(text, kind) {
+      messageBox.textContent = text;
+      messageBox.className = `message ${kind}`;
+    }
+
+    function clearMessage() {
+      messageBox.className = "message";
+      messageBox.textContent = "";
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      clearMessage();
+      const isLogin = mode === "login";
+      tabLogin.classList.toggle("active", isLogin);
+      tabSignup.classList.toggle("active", !isLogin);
+      heading.textContent = isLogin ? "Welcome back" : "Create your account";
+      subtitle.textContent = isLogin
+        ? "Log in to your Sellphi account."
+        : "Anyone can sign up. The very first person to sign up becomes an admin.";
+      submitButton.textContent = isLogin ? "Log in" : "Sign up";
+      passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
+    }
+
+    tabLogin.addEventListener("click", () => setMode("login"));
+    tabSignup.addEventListener("click", () => setMode("signup"));
+
+    // If we're already logged in, skip straight past this page.
+    if (getAccessToken()) {
+      apiFetch("/auth/me").then((response) => {
+        if (response.ok) window.location.href = "/dashboard";
+      });
+    }
+
+    document.getElementById("form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearMessage();
+      const email = document.getElementById("email").value.trim();
+      const password = passwordInput.value;
+
+      submitButton.disabled = true;
+      submitButton.innerHTML = `<span class="spinner"></span> ${mode === "login" ? "Logging in..." : "Signing up..."}`;
+
+      try {
+        let response;
+        if (mode === "login") {
+          const body = new URLSearchParams();
+          body.set("username", email);
+          body.set("password", password);
+          response = await fetch(`${API_BASE}/auth/token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+          });
+        } else {
+          response = await fetch(`${API_BASE}/auth/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+        }
+
+        if (!response.ok) {
+          const problem = await response.json().catch(() => ({}));
+          let detail =
+            (problem && (problem.detail || problem.message)) ||
+            (mode === "login" ? "Incorrect email or password." : "Couldn't sign up.");
+          showMessage(typeof detail === "string" ? detail : JSON.stringify(detail), "error");
+          return;
+        }
+
+        const tokens = await response.json();
+        setTokens(tokens.access_token, tokens.refresh_token);
+        window.location.href = "/dashboard";
+      } catch (err) {
+        showMessage("Something went wrong reaching the server.", "error");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = mode === "login" ? "Log in" : "Create account";
+      }
+    });
+  </script>
+</body>
+</html>

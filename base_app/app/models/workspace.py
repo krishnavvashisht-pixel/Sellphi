@@ -1,7 +1,8 @@
 from enum import StrEnum
 from typing import Any
+from uuid import UUID
 
-from sqlalchemy import Enum, String, UniqueConstraint
+from sqlalchemy import Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +27,11 @@ class Workspace(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "workspaces"
     __table_args__ = (UniqueConstraint("slug", name="uq_workspaces_slug"),)
 
+    owner_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     plan: Mapped[WorkspacePlan] = mapped_column(

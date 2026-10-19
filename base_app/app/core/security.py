@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import Any
 
 import jwt
@@ -11,6 +12,40 @@ from app.schemas.auth import TokenPayload
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+class TokenType(StrEnum):
+    ACCESS = "access"
+    REFRESH = "refresh"
+
+
+def _secret_for(token_type: TokenType, settings: Settings) -> str:
+    if token_type == TokenType.ACCESS:
+        return settings.jwt_access_secret_key.get_secret_value()
+    return settings.jwt_refresh_secret_key.get_secret_value()
+
+
+def _create_token(
+    subject: str,
+    token_type: TokenType,
+    expires_delta: timedelta,
+    settings: Settings,
+    additional_claims: dict[str, Any] | None = None,
+) -> str:
+    now = datetime.now(UTC)
+    expires_at = now + expires_delta
+
+    payload: dict[str, Any] = {
+        "sub": subject,
+        "iss": settings.jwt_issuer,
+        "iat": int(now.timestamp()),
+        "exp": int(expires_at.timestamp()),
+        "token_type": token_type.value,
+    }
+    if additional_claims:
+        payload.update(additional_claims)
+
+    return jwt.encode(payload, _secret_for(token_type, settings), algorithm=settings.jwt_algorithm)
+
+
 def create_access_token(
     subject: str,
     settings: Settings | None = None,
@@ -18,39 +53,55 @@ def create_access_token(
     additional_claims: dict[str, Any] | None = None,
 ) -> str:
     resolved_settings = settings or get_settings()
-    now = datetime.now(UTC)
-    expires_at = now + (
-        expires_delta
-        if expires_delta is not None
-        else timedelta(minutes=resolved_settings.jwt_access_token_expire_minutes)
-    )
-
-    payload: dict[str, Any] = {
-        "sub": subject,
-        "iss": resolved_settings.jwt_issuer,
-        "iat": int(now.timestamp()),
-        "exp": int(expires_at.timestamp()),
-    }
-    if additional_claims:
-        payload.update(additional_claims)
-
-    return jwt.encode(
-        payload,
-        resolved_settings.jwt_secret_key.get_secret_value(),
-        algorithm=resolved_settings.jwt_algorithm,
+    return _create_token(
+        subject,
+        TokenType.ACCESS,
+        expires_delta or timedelta(minutes=resolved_settings.jwt_access_token_expire_minutes),
+        resolved_settings,
+        additional_claims,
     )
 
 
-def decode_access_token(token: str, settings: Settings | None = None) -> TokenPayload | None:
+def create_refresh_token(
+    subject: str,
+    settings: Settings | None = None,
+    expires_delta: timedelta | None = None,
+    additional_claims: dict[str, Any] | None = None,
+) -> str:
+    resolved_settings = settings or get_settings()
+    return _create_token(
+        subject,
+        TokenType.REFRESH,
+        expires_delta or timedelta(minutes=resolved_settings.jwt_refresh_token_expire_minutes),
+        resolved_settings,
+        additional_claims,
+    )
+
+
+def decode_token(
+    token: str,
+    expected_type: TokenType,
+    settings: Settings | None = None,
+) -> TokenPayload | None:
+    """Decode a JWT and verify it is the expected token type.
+
+    The token_type claim is checked before anything else is trusted: a refresh
+    token presented where an access token is required (or vice versa) is
+    rejected even though it would otherwise decode successfully, since access
+    and refresh tokens are semantically different credentials.
+    """
     resolved_settings = settings or get_settings()
     try:
         payload = jwt.decode(
             token,
-            resolved_settings.jwt_secret_key.get_secret_value(),
+            _secret_for(expected_type, resolved_settings),
             algorithms=[resolved_settings.jwt_algorithm],
             issuer=resolved_settings.jwt_issuer,
         )
     except InvalidTokenError:
+        return None
+
+    if payload.get("token_type") != expected_type.value:
         return None
 
     subject = payload.get("sub")

@@ -1,1 +1,1 @@
-"""Version 1 API package."""
+"""Campaigns API package."""

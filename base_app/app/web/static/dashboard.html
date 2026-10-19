@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sellphi — AI SDR Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .workspace-banner {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .product-card {
+      background: #0d0f13;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .product-card.selected {
+      border-color: var(--ok);
+      box-shadow: 0 0 0 1px var(--ok);
+    }
+    .product-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .product-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 440px;
+    }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <strong>⚡ Sellphi AI SDR</strong>
+      <a href="/dashboard" style="color:var(--accent); text-decoration:none; font-weight:600; font-size:14px;">Radar & Products</a>
+      <a href="/admin" style="color:var(--muted); text-decoration:none; font-size:14px;">Admin</a>
+    </div>
+    <div style="display:flex; align-items:center;">
+      <span class="who" id="who">Checking user...</span>
+      <button class="secondary" id="logout" type="button" style="width:auto; margin-left:12px; padding:6px 12px;">Log out</button>
+    </div>
+  </div>
+
+  <div class="dashboard-container">
+    <!-- Workspace & Product Section -->
+    <div class="workspace-banner">
+      <div>
+        <div style="font-size:12px; color:var(--muted); text-transform:uppercase; font-weight:600;">Active Workspace</div>
+        <div style="font-size:18px; font-weight:700; margin-top:2px;" id="workspace-title">Loading Workspace...</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button type="button" class="tag-btn" style="background:var(--accent); color:white; padding:8px 14px; font-weight:600;" onclick="openAddProductModal()">
+          + Add Product
+        </button>
+      </div>
+    </div>
+
+    <!-- Products List Section -->
+    <div class="scan-box" style="margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="font-size:16px; margin:0 0 4px;">My Products & Offerings</h2>
+          <p class="subtitle" style="margin:0; font-size:13px;">Gemini personalizes outreach pitches based on the selected product below.</p>
+        </div>
+        <span id="product-count" class="badge active">0 Products</span>
+      </div>
+
+      <div id="products-list-container" class="product-grid">
+        <div style="color:var(--muted); font-size:13px; grid-column:1/-1;">Loading products...</div>
+      </div>
+    </div>
+
+    <!-- View Switcher Tabs -->
+    <div class="tabs" style="max-width:460px; margin-bottom:20px;">
+      <button type="button" id="tab-radar" class="active" onclick="switchView('radar')">
+        ⚡ Market Signal Radar
+      </button>
+      <button type="button" id="tab-pipeline" onclick="switchView('pipeline')">
+        💼 Saved Pipeline (<span id="pipeline-count-tab">0</span>)
+      </button>
+    </div>
+
+    <!-- 1. Market Signal Radar View -->
+    <div id="view-radar">
+      <div class="scan-box">
+        <h1 style="margin-bottom:8px;">Market Signal Radar</h1>
+        <p class="subtitle" style="margin-bottom:16px;">Scan Google News RSS feeds for real buying signals and have Gemini analyze sales opportunities.</p>
+        
+        <div class="scan-form-row">
+          <input type="text" id="query-input" placeholder="e.g. new manufacturing plant expansion" value="new manufacturing plant OR factory expansion India" />
+          <select id="region-select" style="padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-size:14px;">
+            <option value="IN" selected>🇮🇳 India Edition</option>
+            <option value="US">🇺🇸 Global / US</option>
+          </select>
+          <select id="limit-select">
+            <option value="3">3 items</option>
+            <option value="5" selected>5 items</option>
+            <option value="10">10 items</option>
+          </select>
+          <button id="scan-btn" type="button">Scan Signals with Gemini</button>
+        </div>
+
+        <div class="tags-row" id="quick-tags-container">
+          <span>Quick searches:</span>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing plant OR factory expansion India')">Plant Expansion (India)</button>
+          <button class="tag-btn" type="button" onclick="setQuery('manufacturing plant (EV OR auto OR component) India')">Auto & EV Plants</button>
+          <button class="tag-btn" type="button" onclick="setQuery('breaks ground manufacturing plant India')">Plant Groundbreaking</button>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing unit packaging India')">Packaging & Units</button>
+        </div>
+      </div>
+
+      <div id="status-msg" class="message" style="display:none; margin-bottom:20px;"></div>
+
+      <!-- Detected Signals Section -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; margin:0;">Detected Signals</h2>
+        <div style="display:flex; gap:8px;">
+          <button class="tag-btn" id="filter-all-btn" style="background:var(--accent); color:white;" onclick="filterSignals('all')">All (<span id="count-all">0</span>)</button>
+          <button class="tag-btn" id="filter-kept-btn" onclick="filterSignals('kept')">Qualified Only (<span id="count-kept">0</span>)</button>
+        </div>
+      </div>
+
+      <div id="signals-container">
+        <div style="text-align:center; padding:48px 0; color:var(--muted); background:var(--panel); border:1px solid var(--border); border-radius:12px;">
+          Click <strong>"Scan Signals with Gemini"</strong> above to discover live buying signals.
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Saved Pipeline View -->
+    <div id="view-pipeline" style="display:none;">
+      <div class="scan-box" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h1 style="margin:0 0 4px; font-size:20px;">Sales Pipeline & Opportunities</h1>
+            <p class="subtitle" style="margin:0; font-size:13px;">Manage saved buying signals, review pitches, reach decision makers on LinkedIn, and track deal stages.</p>
+          </div>
+          <button type="button" class="tag-btn" style="background:#238636; color:white; font-weight:600; padding:9px 16px; border:none;" onclick="exportPipelineToCSV()">
+            📥 Export to CSV
+          </button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="metric-pill"><span>Total:</span> <strong id="m-total">0</strong></div>
+            <div class="metric-pill"><span>New:</span> <strong id="m-new">0</strong></div>
+            <div class="metric-pill"><span>Contacted:</span> <strong id="m-contacted">0</strong></div>
+            <div class="metric-pill"><span>Followed Up:</span> <strong id="m-followed">0</strong></div>
+            <div class="metric-pill"><span>Meeting Booked:</span> <strong id="m-booked" style="color:var(--ok);">0</strong></div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="font-size:12px; color:var(--muted); font-weight:600;">Filter Status:</span>
+            <select id="pipeline-status-filter" onchange="renderPipeline()" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-size:13px;">
+              <option value="all">All Stages</option>
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="followed_up">Followed Up</option>
+              <option value="meeting_booked">Meeting Booked</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="pipeline-container">
+        <div style="text-align:center; padding:48px 0; color:var(--muted); background:var(--panel); border:1px solid var(--border); border-radius:12px;">
+          No saved opportunities yet. In the <strong>Market Signal Radar</strong>, click <strong>"⭐ Save to Pipeline"</strong> on any detected signal!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div id="product-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; margin:0;">Add New Product</h2>
+        <button type="button" class="copy-btn" onclick="closeAddProductModal()">✕</button>
+      </div>
+      <form id="add-product-form" onsubmit="submitAddProduct(event)">
+        <label for="prod-name">Product Name *</label>
+        <input type="text" id="prod-name" placeholder="e.g. Sellphi AI SDR" required />
+
+        <label for="prod-category">Category</label>
+        <input type="text" id="prod-category" placeholder="e.g. B2B Sales Automation" />
+
+        <label for="prod-website">Website URL</label>
+        <input type="url" id="prod-website" placeholder="https://sellphi.com" />
+
+        <label for="prod-description">Value Proposition / Description</label>
+        <textarea id="prod-description" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-family:inherit; font-size:14px; margin-bottom:16px;" placeholder="What does this product do and what problem does it solve?"></textarea>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" class="secondary" style="width:auto;" onclick="closeAddProductModal()">Cancel</button>
+          <button type="submit" style="width:auto; background:var(--ok); color:#000;">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let currentWorkspace = null;
+    let productsList = [];
+    let selectedProductId = null;
+    let currentSignals = [];
+    let generatedPitches = {};
+    let pipelineList = [];
+    let activeFilter = 'all';
+    let currentView = 'radar';
+
+    // 1. Initialize Workspace & Products
+    async function initWorkspace() {
+      document.getElementById('workspace-title').innerHTML = '<span class="spinner spinner-accent"></span> Loading Workspace...';
+      try {
+        const res = await apiFetch('/workspaces/current');
+        if (res.ok) {
+          currentWorkspace = await res.json();
+          document.getElementById('workspace-title').textContent = currentWorkspace.name;
+          await loadProducts();
+          await loadPipelineOpportunities();
+        } else {
+          document.getElementById('workspace-title').textContent = 'Default Local Workspace';
+        }
+      } catch (err) {
+        document.getElementById('workspace-title').textContent = 'Local Workspace';
+      }
+    }
+
+    // 2. Load Products
+    async function loadProducts() {
+      if (!currentWorkspace) return;
+      document.getElementById('products-list-container').innerHTML = `
+        <div style="color:var(--muted); font-size:13px; grid-column:1/-1; padding:20px; text-align:center;">
+          <span class="spinner spinner-accent"></span> Loading your products & offerings...
+        </div>
+      `;
+      try {
+        const res = await apiFetch(`/products?workspace_id=${currentWorkspace.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          productsList = data.items || [];
+          document.getElementById('product-count').textContent = `${productsList.length} Product${productsList.length === 1 ? '' : 's'}`;
+          
+          if (productsList.length > 0 && !selectedProductId) {
+            selectedProductId = productsList[0].id;
+          }
+          renderProducts();
+          updateSearchTagsForActiveProduct();
+        }
+      } catch (err) {
+        console.error('Failed to load products', err);
+      }
+    }
+
+    // 3. Render Products
+    function renderProducts() {
+      const container = document.getElementById('products-list-container');
+      if (!productsList.length) {
+        container.innerHTML = `
+          <div style="color:var(--muted); font-size:13px; grid-column:1/-1; padding:16px; text-align:center; background:#111419; border-radius:8px;">
+            No products added yet. Click <strong>"+ Add Product"</strong> above to add your offering!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = productsList.map(p => {
+        const isSelected = p.id === selectedProductId;
+        return `
+          <div class="product-card ${isSelected ? 'selected' : ''}" onclick="selectProduct('${p.id}')" style="cursor:pointer;">
+            <div class="product-card-header">
+              <div>
+                <div class="product-name">${escapeHtml(p.name)}</div>
+                <div style="font-size:12px; color:var(--muted);">${escapeHtml(p.category || 'General')}</div>
+              </div>
+              <button type="button" class="tag-btn" style="color:var(--danger); border-color:rgba(255,92,92,0.3); padding:2px 8px; font-size:11px;" onclick="removeProduct(event, '${p.id}', '${escapeAttr(p.name)}')">✕ Remove</button>
+            </div>
+            <div style="font-size:12px; color:#cbd5e1; line-height:1.4; margin-top:6px;">
+              ${escapeHtml(p.description || '(No description provided)')}
+            </div>
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+              <span class="badge ${isSelected ? 'active' : ''}" style="font-size:11px;">
+                ${isSelected ? '✓ Active for Pitching' : 'Click to select'}
+              </span>
+              ${p.website ? `<a href="${escapeHtml(p.website)}" target="_blank" style="font-size:12px; color:var(--accent); text-decoration:none;" onclick="event.stopPropagation()">Website ↗</a>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectProduct(id) {
+      selectedProductId = id;
+      renderProducts();
+      updateSearchTagsForActiveProduct();
+    }
+
+    function updateSearchTagsForActiveProduct() {
+      const activeProd = productsList.find(p => p.id === selectedProductId);
+      if (!activeProd) return;
+
+      const combined = `${activeProd.name} ${activeProd.category || ''} ${activeProd.description || ''}`.toLowerCase();
+      const isIndustrial = /fan|blower|ventilation|exhaust|dust|manufacturing|industrial|equipment|pollution|air movement|factory|machinery/.test(combined);
+      const tagsContainer = document.getElementById('quick-tags-container');
+      const regionSelect = document.getElementById('region-select');
+
+      if (isIndustrial) {
+        document.getElementById('query-input').value = 'new manufacturing plant OR factory expansion India';
+        if (regionSelect) regionSelect.value = 'IN';
+        tagsContainer.innerHTML = `
+          <span>Quick searches:</span>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing plant OR factory expansion India')">Plant Expansion (India)</button>
+          <button class="tag-btn" type="button" onclick="setQuery('manufacturing plant (EV OR auto OR component) India')">Auto & EV Plants</button>
+          <button class="tag-btn" type="button" onclick="setQuery('breaks ground manufacturing plant India')">Plant Groundbreaking</button>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing unit packaging India')">Packaging & Units</button>
+        `;
+      } else {
+        document.getElementById('query-input').value = 'series A funding SaaS';
+        if (regionSelect) regionSelect.value = 'US';
+        tagsContainer.innerHTML = `
+          <span>Quick searches:</span>
+          <button class="tag-btn" type="button" onclick="setQuery('series A funding SaaS')">Series A SaaS</button>
+          <button class="tag-btn" type="button" onclick="setQuery('seed funding AI startup')">Seed AI Startup</button>
+          <button class="tag-btn" type="button" onclick="setQuery('hiring VP of Sales SaaS')">VP Sales Hiring</button>
+          <button class="tag-btn" type="button" onclick="setQuery('series B funding enterprise software')">Series B Enterprise</button>
+        `;
+      }
+    }
+
+    // 4. Modal Handlers
+    function openAddProductModal() {
+      document.getElementById('product-modal').style.display = 'flex';
+      document.getElementById('prod-name').focus();
+    }
+
+    function closeAddProductModal() {
+      document.getElementById('product-modal').style.display = 'none';
+      document.getElementById('add-product-form').reset();
+    }
+
+    // 5. Add Product Form Submission
+    async function submitAddProduct(event) {
+      event.preventDefault();
+      if (!currentWorkspace) {
+        alert('Workspace not loaded yet.');
+        return;
+      }
+
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      const originalHtml = submitBtn ? submitBtn.innerHTML : 'Save Product';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Saving...';
+      }
+
+      const name = document.getElementById('prod-name').value.trim();
+      const category = document.getElementById('prod-category').value.trim();
+      const website = document.getElementById('prod-website').value.trim();
+      const description = document.getElementById('prod-description').value.trim();
+
+      try {
+        const res = await apiFetch('/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: currentWorkspace.id,
+            name,
+            category: category || null,
+            website: website || null,
+            description: description || null
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Failed to add product: ' + (err.detail || 'Unknown error'));
+          return;
+        }
+
+        const newProd = await res.json();
+        closeAddProductModal();
+        await loadProducts();
+        selectedProductId = newProd.id;
+        renderProducts();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalHtml;
+        }
+      }
+    }
+
+    // 6. Remove Product
+    async function removeProduct(event, productId, productName) {
+      event.stopPropagation();
+      if (!confirm(`Are you sure you want to remove "${productName}"?`)) return;
+
+      try {
+        const res = await apiFetch(`/products/${productId}`, { method: 'DELETE' });
+        if (res.ok) {
+          if (selectedProductId === productId) selectedProductId = null;
+          await loadProducts();
+        } else {
+          alert('Failed to delete product.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // 7. Signal Scanner & Pitch Logic
+    function setQuery(q) {
+      document.getElementById('query-input').value = q;
+    }
+
+    function showStatus(text, kind = 'info') {
+      const box = document.getElementById('status-msg');
+      box.textContent = text;
+      box.className = `message ${kind}`;
+      box.style.display = 'block';
+    }
+
+    function hideStatus() {
+      const box = document.getElementById('status-msg');
+      box.style.display = 'none';
+      box.textContent = '';
+    }
+
+    async function scanSignals() {
+      const query = document.getElementById('query-input').value.trim();
+      const limit = parseInt(document.getElementById('limit-select').value, 10);
+      const scanBtn = document.getElementById('scan-btn');
+      const signalsContainer = document.getElementById('signals-container');
+
+      if (!query) return;
+
+      scanBtn.disabled = true;
+      scanBtn.innerHTML = '<span class="spinner"></span> Scanning with Gemini...';
+      showStatus(`Scanning Google News and classifying top ${limit} items with Gemini... Please wait a few seconds.`, 'info');
+
+      // Show animated loading card in the signals container
+      signalsContainer.innerHTML = `
+        <div class="spinner-card">
+          <div class="spinner spinner-accent spinner-lg"></div>
+          <div class="spinner-card-title">Scanning Google News & Evaluating Signals...</div>
+          <div style="font-size:13px; color:var(--muted); max-width:480px; margin:0 auto; line-height:1.5;">
+            Gemini is reading real-time articles, removing duplicate press releases, and classifying high-priority sales triggers. Please wait...
+          </div>
+        </div>
+      `;
+
+      try {
+        const activeProd = productsList.find(p => p.id === selectedProductId);
+        const regionSelect = document.getElementById('region-select');
+        const region = regionSelect ? regionSelect.value : 'IN';
+        const response = await apiFetch('/signals/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query,
+            limit,
+            region,
+            product_name: activeProd ? activeProd.name : null,
+            product_category: activeProd ? activeProd.category : null,
+            product_description: activeProd ? activeProd.description : null
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Scan failed');
+        }
+
+        currentSignals = await response.json();
+        hideStatus();
+        renderSignals();
+      } catch (err) {
+        showStatus(`Error: ${err.message}`, 'error');
+        signalsContainer.innerHTML = `
+          <div style="text-align:center; padding:32px; color:var(--danger); background:var(--panel); border:1px solid rgba(255,92,92,0.3); border-radius:12px;">
+            Scan failed: ${escapeHtml(err.message)}
+          </div>
+        `;
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Scan Signals with Gemini';
+      }
+    }
+
+    function filterSignals(mode) {
+      activeFilter = mode;
+      document.getElementById('filter-all-btn').style.background = mode === 'all' ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)';
+      document.getElementById('filter-all-btn').style.color = mode === 'all' ? 'white' : 'var(--text)';
+      document.getElementById('filter-kept-btn').style.background = mode === 'kept' ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)';
+      document.getElementById('filter-kept-btn').style.color = mode === 'kept' ? 'white' : 'var(--text)';
+      renderSignals();
+    }
+
+    function dismissSignal(link) {
+      currentSignals = currentSignals.filter(s => s.link !== link);
+      renderSignals();
+    }
+
+    function renderSignals() {
+      const container = document.getElementById('signals-container');
+      const keptCount = currentSignals.filter(s => s.verdict === 'KEPT').length;
+      document.getElementById('count-all').textContent = currentSignals.length;
+      document.getElementById('count-kept').textContent = keptCount;
+
+      const filtered = activeFilter === 'kept'
+        ? currentSignals.filter(s => s.verdict === 'KEPT')
+        : currentSignals;
+
+      if (!filtered.length) {
+        container.innerHTML = `<div style="text-align:center; padding:32px; color:var(--muted); background:var(--panel); border:1px solid var(--border); border-radius:12px;">No signals match this filter.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map((s, idx) => {
+        const isKept = s.verdict === 'KEPT';
+        const badgeClass = isKept ? 'kept-badge' : 'discarded-badge';
+        const cardClass = isKept ? 'kept' : 'discarded';
+        const cardId = `sig-${idx}`;
+
+        return `
+          <div class="signal-card ${cardClass}" id="${cardId}">
+            <div class="signal-header">
+              <div>
+                <div class="company-title">${escapeHtml(s.company_name)} ${s.company_domain ? `<span style="font-size:12px; font-weight:normal; color:var(--muted);">(${escapeHtml(s.company_domain)})</span>` : ''}</div>
+                <a href="${escapeHtml(s.link)}" target="_blank" rel="noopener noreferrer" class="signal-article-link">📰 ${escapeHtml(s.title)} ↗</a>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge ${badgeClass}">${s.verdict} (Score: ${s.score.toFixed(2)})</span>
+                <div style="font-size:11px; color:var(--muted); margin-top:4px;">Type: ${escapeHtml(s.signal_type)} | Urgency: ${escapeHtml(s.urgency)}</div>
+                <button type="button" class="copy-btn" style="padding:2px 8px; font-size:11px; margin-top:6px; border-color:rgba(255,255,255,0.15);" onclick="dismissSignal('${escapeAttr(s.link)}')">✕ Dismiss</button>
+              </div>
+            </div>
+
+            <div class="signal-body-section">
+              <div><strong>Trigger Evidence:</strong> ${escapeHtml(s.evidence)}</div>
+              <div style="margin-top:6px;"><strong>Sales Implication:</strong> ${escapeHtml(s.sales_implication)}</div>
+            </div>
+
+            <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+              <button type="button" id="save-btn-${cardId}" class="tag-btn" style="background:rgba(255, 255, 255, 0.08); color:var(--text); border:1px solid var(--border); font-weight:600; padding:8px 14px;" onclick="saveOpportunityFromSignal('${escapeAttr(s.link)}', '${cardId}')">
+                ⭐ Save to Pipeline
+              </button>
+              <button type="button" id="pitch-btn-${cardId}" class="tag-btn" style="${isKept ? 'background:var(--accent); color:white;' : 'background:rgba(255, 255, 255, 0.08); color:var(--text); border:1px solid var(--border);'} font-weight:600; padding:8px 14px;" onclick="generatePitch('${escapeAttr(s.link)}', '${cardId}')">
+                ✨ Generate Pitch with Gemini
+              </button>
+            </div>
+            <div id="pitch-container-${cardId}"></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function generatePitch(link, cardId) {
+      const s = currentSignals.find(sig => sig.link === link);
+      if (!s) return;
+      const targetDiv = document.getElementById(`pitch-container-${cardId}`);
+      const pitchBtn = document.getElementById(`pitch-btn-${cardId}`);
+      
+      const activeProd = productsList.find(p => p.id === selectedProductId);
+      const prodName = activeProd ? activeProd.name : 'Sellphi';
+      const prodDesc = activeProd ? activeProd.description : null;
+
+      if (pitchBtn) {
+        pitchBtn.disabled = true;
+        pitchBtn.innerHTML = '<span class="spinner"></span> Writing Outreach...';
+      }
+
+      targetDiv.innerHTML = `
+        <div style="padding:18px 20px; background:#111419; border:1px solid rgba(79, 140, 255, 0.35); border-radius:10px; margin-top:14px; display:flex; align-items:center; gap:16px;">
+          <div class="spinner spinner-accent spinner-lg" style="margin:0; width:28px; height:28px; border-width:3px; flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:3px;">Gemini is writing your 1-to-1 outreach...</div>
+            <div style="font-size:12px; color:var(--muted); line-height:1.4;">
+              Analyzing company news triggers, identifying key decision-maker for <strong>${escapeHtml(prodName)}</strong>, and generating subject line + cold email + follow-up.
+            </div>
+          </div>
+        </div>
+      `;
+
+      try {
+        const response = await apiFetch('/signals/pitch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: s.company_name,
+            evidence: s.evidence,
+            sales_implication: s.sales_implication,
+            product_name: prodName,
+            product_description: prodDesc
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Pitch generation failed');
+        }
+
+        const pitch = await response.json();
+        generatedPitches[link] = pitch;
+
+        targetDiv.innerHTML = `
+          <div class="pitch-box">
+            <div class="pitch-header" style="flex-wrap:wrap; gap:10px;">
+              <span>🎯 Outreach Package (Gemini) — Pitching: <u>${escapeHtml(prodName)}</u> to ${escapeHtml(pitch.target_persona)}</span>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="${getLinkedInSearchUrl(s.company_name, pitch.target_persona)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-linkedin">
+                  🔍 Find on LinkedIn ↗
+                </a>
+                <a href="${getGmailComposeUrl(pitch.subject_line, pitch.email_body)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-gmail">
+                  📨 Open in Gmail ↗
+                </a>
+              </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:var(--muted); font-weight:600;">SUBJECT LINE</span>
+              <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.subject_line)}', this)">Copy Subject</button>
+            </div>
+            <pre class="pitch-content-pre">${escapeHtml(pitch.subject_line)}</pre>
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:var(--muted); font-weight:600;">COLD OUTREACH EMAIL</span>
+              <div style="display:flex; gap:8px;">
+                <a href="mailto:?subject=${encodeURIComponent(pitch.subject_line)}&body=${encodeURIComponent(pitch.email_body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.email_body)}', this)">Copy Email</button>
+              </div>
+            </div>
+            <pre class="pitch-content-pre">${escapeHtml(pitch.email_body)}</pre>
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:var(--muted); font-weight:600;">DAY 3 FOLLOW-UP</span>
+              <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.follow_up_email)}', this)">Copy Follow-up</button>
+            </div>
+            <pre class="pitch-content-pre">${escapeHtml(pitch.follow_up_email)}</pre>
+          </div>
+        `;
+      } catch (err) {
+        targetDiv.innerHTML = `<div style="padding:12px; color:var(--danger); font-size:13px;">Failed to generate pitch: ${escapeHtml(err.message)}</div>`;
+      } finally {
+        if (pitchBtn) {
+          pitchBtn.disabled = false;
+          pitchBtn.innerHTML = '✨ Regenerate Pitch with Gemini';
+        }
+      }
+    }
+
+    // 8. Pipeline & Lead Management
+    function switchView(view) {
+      currentView = view;
+      document.getElementById('tab-radar').className = view === 'radar' ? 'active' : '';
+      document.getElementById('tab-pipeline').className = view === 'pipeline' ? 'active' : '';
+      document.getElementById('view-radar').style.display = view === 'radar' ? 'block' : 'none';
+      document.getElementById('view-pipeline').style.display = view === 'pipeline' ? 'block' : 'none';
+      if (view === 'pipeline') {
+        loadPipelineOpportunities();
+      }
+    }
+
+    async function saveOpportunityFromSignal(link, cardId) {
+      if (!currentWorkspace) {
+        alert('Please select or wait for your active workspace.');
+        return;
+      }
+      const s = currentSignals.find(sig => sig.link === link);
+      if (!s) return;
+
+      const saveBtn = document.getElementById(`save-btn-${cardId}`);
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner"></span> Saving...';
+      }
+
+      const pitchData = generatedPitches[link] || {};
+
+      try {
+        const res = await apiFetch('/opportunities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: currentWorkspace.id,
+            company_name: s.company_name,
+            company_domain: s.company_domain || null,
+            title: s.title,
+            article_link: s.link,
+            score: s.score,
+            evidence: s.evidence,
+            sales_implication: s.sales_implication,
+            target_persona: pitchData.target_persona || null,
+            subject_line: pitchData.subject_line || null,
+            email_body: pitchData.email_body || null,
+            follow_up_email: pitchData.follow_up_email || null,
+            status: 'new'
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to save to database');
+
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.style.borderColor = 'var(--ok)';
+          saveBtn.style.color = 'var(--ok)';
+          saveBtn.innerHTML = '✓ Saved to Pipeline';
+        }
+        await loadPipelineOpportunities();
+      } catch (err) {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '⭐ Save to Pipeline';
+        }
+        alert('Failed to save: ' + err.message);
+      }
+    }
+
+    async function loadPipelineOpportunities() {
+      if (!currentWorkspace) return;
+      try {
+        const res = await apiFetch(`/opportunities?workspace_id=${currentWorkspace.id}`);
+        if (res.ok) {
+          pipelineList = await res.json();
+          updatePipelineMetrics();
+          renderPipeline();
+        }
+      } catch (err) {
+        console.error('Failed to load pipeline', err);
+      }
+    }
+
+    function updatePipelineMetrics() {
+      const total = pipelineList.length;
+      const countNew = pipelineList.filter(o => o.status === 'new').length;
+      const countContacted = pipelineList.filter(o => o.status === 'contacted').length;
+      const countFollowed = pipelineList.filter(o => o.status === 'followed_up').length;
+      const countBooked = pipelineList.filter(o => o.status === 'meeting_booked').length;
+
+      document.getElementById('pipeline-count-tab').textContent = total;
+      document.getElementById('m-total').textContent = total;
+      document.getElementById('m-new').textContent = countNew;
+      document.getElementById('m-contacted').textContent = countContacted;
+      document.getElementById('m-followed').textContent = countFollowed;
+      document.getElementById('m-booked').textContent = countBooked;
+    }
+
+    function renderPipeline() {
+      const container = document.getElementById('pipeline-container');
+      const filter = document.getElementById('pipeline-status-filter').value;
+      const filtered = filter === 'all'
+        ? pipelineList
+        : pipelineList.filter(o => o.status === filter);
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:48px 0; color:var(--muted); background:var(--panel); border:1px solid var(--border); border-radius:12px;">
+            ${pipelineList.length === 0
+              ? 'No saved opportunities yet. In the <strong>Market Signal Radar</strong>, click <strong>"⭐ Save to Pipeline"</strong> on any detected signal!'
+              : 'No opportunities match the selected status filter.'}
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(opp => {
+        const hasPitch = Boolean(opp.email_body);
+        return `
+          <div class="pipeline-card" id="opp-card-${opp.id}">
+            <div class="pipeline-header">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <strong style="font-size:16px; color:var(--text);">${escapeHtml(opp.company_name)}</strong>
+                  ${opp.company_domain ? `<span style="font-size:12px; color:var(--muted);">(${escapeHtml(opp.company_domain)})</span>` : ''}
+                  <span class="badge active" style="font-size:11px;">Score: ${(opp.score || 0).toFixed(2)}</span>
+                </div>
+                <div style="margin-top:4px;">
+                  <a href="${escapeHtml(opp.article_link)}" target="_blank" rel="noopener noreferrer" style="color:var(--muted); font-size:13px; text-decoration:none;">
+                    📰 ${escapeHtml(opp.title)} ↗
+                  </a>
+                </div>
+              </div>
+              
+              <div style="display:flex; align-items:center; gap:10px;">
+                <label style="margin:0; font-size:12px; color:var(--muted);">Stage:</label>
+                <select class="status-select" onchange="updateOpportunityStatus('${opp.id}', this.value)">
+                  <option value="new" ${opp.status === 'new' ? 'selected' : ''}>New Lead</option>
+                  <option value="contacted" ${opp.status === 'contacted' ? 'selected' : ''}>Email Sent</option>
+                  <option value="followed_up" ${opp.status === 'followed_up' ? 'selected' : ''}>Followed Up</option>
+                  <option value="meeting_booked" ${opp.status === 'meeting_booked' ? 'selected' : ''}>🎉 Meeting Booked</option>
+                </select>
+                <button type="button" class="copy-btn" style="color:var(--danger); border-color:rgba(255,92,92,0.3); padding:4px 8px;" onclick="deleteOpportunity('${opp.id}', '${escapeAttr(opp.company_name)}')">
+                  🗑️
+                </button>
+              </div>
+            </div>
+
+            <div style="font-size:13px; color:#cbd5e1; line-height:1.5; margin-bottom:12px;">
+              <strong>Trigger Evidence:</strong> ${escapeHtml(opp.evidence)}
+            </div>
+
+            <!-- Quick Action Links -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              ${opp.target_persona ? `<span style="font-size:12px; color:var(--accent); font-weight:600; padding:4px 8px; background:rgba(79, 140, 255, 0.1); border-radius:6px;">🎯 ${escapeHtml(opp.target_persona)}</span>` : ''}
+              
+              <a href="${getLinkedInSearchUrl(opp.company_name, opp.target_persona)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-linkedin">
+                🔍 Find on LinkedIn ↗
+              </a>
+
+              ${hasPitch ? `
+                <a href="${getGmailComposeUrl(opp.subject_line, opp.email_body)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-gmail">
+                  📨 Open in Gmail ↗
+                </a>
+                <button type="button" class="action-pill" onclick="togglePitchDrawer('${opp.id}')">
+                  📋 View Outreach Email
+                </button>
+              ` : `
+                <span style="font-size:12px; color:var(--muted);">(No pitch generated yet. Generate pitch in Radar view.)</span>
+              `}
+            </div>
+
+            ${hasPitch ? `
+              <div id="opp-pitch-drawer-${opp.id}" style="display:none; margin-top:14px; padding:16px; background:#090b0e; border-radius:8px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:11px; font-weight:600; color:var(--muted);">SUBJECT</span>
+                  <button class="copy-btn" onclick="copyText('${escapeAttr(opp.subject_line)}', this)">Copy</button>
+                </div>
+                <div style="font-size:13px; color:var(--text); margin-bottom:10px; font-weight:500;">${escapeHtml(opp.subject_line)}</div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:11px; font-weight:600; color:var(--muted);">COLD OUTREACH EMAIL</span>
+                  <div style="display:flex; gap:8px;">
+                    <a href="mailto:?subject=${encodeURIComponent(opp.subject_line)}&body=${encodeURIComponent(opp.email_body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                    <button class="copy-btn" onclick="copyText('${escapeAttr(opp.email_body)}', this)">Copy</button>
+                  </div>
+                </div>
+                <pre class="pitch-content-pre" style="margin:0 0 10px;">${escapeHtml(opp.email_body)}</pre>
+
+                ${opp.follow_up_email ? `
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:11px; font-weight:600; color:var(--muted);">DAY 3 FOLLOW-UP</span>
+                    <button class="copy-btn" onclick="copyText('${escapeAttr(opp.follow_up_email)}', this)">Copy</button>
+                  </div>
+                  <pre class="pitch-content-pre" style="margin:0;">${escapeHtml(opp.follow_up_email)}</pre>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function togglePitchDrawer(id) {
+      const drawer = document.getElementById(`opp-pitch-drawer-${id}`);
+      if (drawer) {
+        drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+      }
+    }
+
+    async function updateOpportunityStatus(id, newStatus) {
+      try {
+        const res = await apiFetch(`/opportunities/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) {
+          const opp = pipelineList.find(o => o.id === id);
+          if (opp) opp.status = newStatus;
+          updatePipelineMetrics();
+        }
+      } catch (err) {
+        console.error('Failed to update status', err);
+      }
+    }
+
+    async function deleteOpportunity(id, companyName) {
+      if (!confirm(`Remove "${companyName}" from your pipeline?`)) return;
+      try {
+        const res = await apiFetch(`/opportunities/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          pipelineList = pipelineList.filter(o => o.id !== id);
+          renderPipeline();
+          updatePipelineMetrics();
+        }
+      } catch (err) {
+        alert('Failed to delete opportunity');
+      }
+    }
+
+    function exportPipelineToCSV() {
+      if (!pipelineList.length) {
+        alert('No saved opportunities in pipeline to export.');
+        return;
+      }
+
+      const headers = ['Company', 'Domain', 'Stage', 'Target Persona', 'Subject Line', 'Cold Email', 'Day 3 Follow Up', 'Trigger Evidence', 'Article Link', 'Fit Score', 'Saved At'];
+      const rows = pipelineList.map(opp => [
+        opp.company_name,
+        opp.company_domain || '',
+        opp.status,
+        opp.target_persona || '',
+        opp.subject_line || '',
+        opp.email_body || '',
+        opp.follow_up_email || '',
+        opp.evidence,
+        opp.article_link,
+        (opp.score || 0).toFixed(2),
+        new Date(opp.created_at).toLocaleString()
+      ]);
+
+      const csvContent = [
+        headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sellphi_pipeline_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function getLinkedInSearchUrl(company, persona) {
+      const q = persona ? `site:linkedin.com/in "${company}" "${persona}"` : `site:linkedin.com/in "${company}"`;
+      return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+    }
+
+    function getGmailComposeUrl(subject, body) {
+      return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject || '')}&body=${encodeURIComponent(body || '')}`;
+    }
+
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      });
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttr(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '');
+    }
+
+    document.getElementById('scan-btn').addEventListener('click', scanSignals);
+
+    // Initial check
+    if (getAccessToken()) {
+      apiFetch('/auth/me')
+        .then(res => res.ok ? res.json() : null)
+        .then(user => {
+          if (user) {
+            document.getElementById('who').textContent = `${user.email}${user.is_admin ? ' (admin)' : ''}`;
+            initWorkspace();
+          } else {
+            clearTokens();
+            goToLogin();
+          }
+        })
+        .catch(() => {
+          initWorkspace();
+        });
+
+      document.getElementById('logout').addEventListener('click', () => {
+        clearTokens();
+        goToLogin();
+      });
+    } else {
+      goToLogin();
+    }
+  </script>
+</body>
+</html>

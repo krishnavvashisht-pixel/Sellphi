@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sellphi — Admin</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="admin-body">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <strong>⚡ Sellphi admin</strong>
+      <a href="/dashboard" style="color:var(--muted); text-decoration:none; font-size:14px;">Signals & Outreach</a>
+      <a href="/admin" style="color:var(--accent); text-decoration:none; font-weight:600; font-size:14px;">Admin</a>
+    </div>
+    <div>
+      <span class="who" id="who"></span>
+      <button class="secondary" id="logout" type="button" style="width:auto; margin-left:12px; padding:6px 12px;">Log out</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="message" class="message"></div>
+
+    <div id="denied" class="denied hidden">
+      <h1>Access denied</h1>
+      <p class="subtitle">This page is only visible to admins. Ask an existing admin to promote your account if you need access.</p>
+    </div>
+
+    <table id="users-table" class="hidden">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Role</th>
+          <th>Signed up</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-body"></tbody>
+    </table>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let me = null;
+
+    function showMessage(text, kind) {
+      const box = document.getElementById("message");
+      box.textContent = text;
+      box.className = `message ${kind}`;
+    }
+
+    function clearMessage() {
+      const box = document.getElementById("message");
+      box.className = "message";
+      box.textContent = "";
+    }
+
+    function renderUsers(users) {
+      const body = document.getElementById("users-body");
+      body.innerHTML = "";
+
+      for (const user of users) {
+        const row = document.createElement("tr");
+
+        const statusBadge = user.is_active
+          ? '<span class="badge active">Active</span>'
+          : '<span class="badge inactive">Inactive</span>';
+        const roleBadge = user.is_admin
+          ? '<span class="badge admin">Admin</span>'
+          : "Regular";
+
+        const isSelf = user.id === me.id;
+        const toggleActiveLabel = user.is_active ? "Deactivate" : "Activate";
+        const toggleAdminLabel = user.is_admin ? "Remove admin" : "Make admin";
+
+        row.innerHTML = `
+          <td>${user.email}${isSelf ? " (you)" : ""}</td>
+          <td>${statusBadge}</td>
+          <td>${roleBadge}</td>
+          <td>${new Date(user.created_at).toLocaleDateString()}</td>
+          <td class="row-actions">
+            <button data-action="toggle-active" data-id="${user.id}" data-value="${!user.is_active}">${toggleActiveLabel}</button>
+            <button data-action="toggle-admin" data-id="${user.id}" data-value="${!user.is_admin}">${toggleAdminLabel}</button>
+          </td>
+        `;
+        body.appendChild(row);
+      }
+    }
+
+    async function loadUsers() {
+      const body = document.getElementById("users-body");
+      if (body) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--muted);"><span class="spinner spinner-accent"></span> Loading users...</td></tr>';
+      }
+      const response = await apiFetch("/admin/users");
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        showMessage(problem.detail || "Couldn't load users.", "error");
+        return;
+      }
+      renderUsers(await response.json());
+    }
+
+    document.getElementById("users-body").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+
+      const userId = button.dataset.id;
+      const value = button.dataset.value === "true";
+      const payload = button.dataset.action === "toggle-active"
+        ? { is_active: value }
+        : { is_admin: value };
+
+      clearMessage();
+      const response = await apiFetch(`/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        showMessage(problem.detail || "That change was refused.", "error");
+        return;
+      }
+
+      await loadUsers();
+    });
+
+    document.getElementById("logout").addEventListener("click", () => {
+      clearTokens();
+      goToLogin();
+    });
+
+    (async () => {
+      me = await requireLogin();
+      if (!me) return; // requireLogin already redirected to /login
+
+      document.getElementById("who").textContent = `${me.email}${me.is_admin ? " · admin" : ""}`;
+
+      if (!me.is_admin) {
+        document.getElementById("denied").classList.remove("hidden");
+        return;
+      }
+
+      document.getElementById("users-table").classList.remove("hidden");
+      await loadUsers();
+    })();
+  </script>
+</body>
+</html>

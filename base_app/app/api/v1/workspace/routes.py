@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.dependencies import DbSessionDep
+from app.api.dependencies import CurrentUserDep, DbSessionDep
 from app.repositories.workspace import WorkspaceRepository
 from app.schemas.workspace import WorkspaceCreate, WorkspaceResponse, WorkspaceUpdate
 from app.services.workspace import WorkspaceService
@@ -17,6 +17,30 @@ def get_workspace_service(db_session: DbSessionDep) -> WorkspaceService:
 
 
 WorkspaceServiceDep = Annotated[WorkspaceService, Depends(get_workspace_service)]
+
+
+@router.get("/current", response_model=WorkspaceResponse)
+async def get_current_workspace(
+    service: WorkspaceServiceDep,
+    current_user: CurrentUserDep,
+) -> WorkspaceResponse:
+    """Get or auto-create the active workspace for the logged-in user."""
+    workspace = await service.get_or_create_default_for_user(current_user.id, current_user.email)
+    return WorkspaceResponse.model_validate(workspace)
+
+
+@router.get("/mine", response_model=list[WorkspaceResponse])
+async def list_my_workspaces(
+    service: WorkspaceServiceDep,
+    current_user: CurrentUserDep,
+) -> list[WorkspaceResponse]:
+    """List all workspaces owned by the current user."""
+    workspaces = await service.list_by_owner(current_user.id)
+    if not workspaces:
+        ws = await service.get_or_create_default_for_user(current_user.id, current_user.email)
+        workspaces = [ws]
+    return [WorkspaceResponse.model_validate(w) for w in workspaces]
+
 
 
 @router.post(

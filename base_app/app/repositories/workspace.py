@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from uuid import UUID
 
 from sqlalchemy import select
@@ -23,6 +25,15 @@ class WorkspaceRepository:
             .order_by(Workspace.created_at.desc())
             .offset(offset)
             .limit(limit)
+        )
+        result = await self._session.execute(statement)
+        return list(result.scalars().all())
+
+    async def list_by_owner(self, owner_id: UUID) -> list[Workspace]:
+        statement = (
+            select(Workspace)
+            .where(Workspace.owner_id == owner_id, Workspace.deleted_at.is_(None))
+            .order_by(Workspace.created_at.desc())
         )
         result = await self._session.execute(statement)
         return list(result.scalars().all())

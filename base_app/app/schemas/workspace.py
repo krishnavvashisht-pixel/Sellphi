@@ -10,6 +10,7 @@ from app.models.workspace import WorkspacePlan, WorkspaceStatus
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     slug: str | None = Field(default=None, min_length=1, max_length=255)
+    owner_id: UUID | None = None
     plan: WorkspacePlan = WorkspacePlan.FREE
     status: WorkspaceStatus = WorkspaceStatus.ACTIVE
     settings: dict[str, Any] = Field(default_factory=dict)
@@ -37,6 +38,7 @@ class WorkspaceResponse(BaseModel):
     id: UUID
     name: str
     slug: str
+    owner_id: UUID | None = None
     plan: WorkspacePlan
     status: WorkspaceStatus
     settings: dict[str, Any]

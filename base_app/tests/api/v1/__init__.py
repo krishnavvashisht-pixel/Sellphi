@@ -1,1 +1,1 @@
-"""API v1 tests."""
+"""Health tests."""
