@@ -27,8 +27,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         from app.db.base import Base
         import app.models  # noqa: F401
         from app.db.session import engine
+        from sqlalchemy import text
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+            def _migrate_sqlite_columns(sync_conn):
+                try:
+                    res = sync_conn.execute(text("PRAGMA table_info(opportunities)"))
+                    cols = {row[1] for row in res.fetchall()}
+                    if cols:
+                        if "step3_email" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN step3_email TEXT"))
+                        if "step4_breakup" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN step4_breakup TEXT"))
+                        if "tone" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN tone VARCHAR(50) DEFAULT 'direct'"))
+                except Exception:
+                    pass
+
+            await conn.run_sync(_migrate_sqlite_columns)
     except Exception as exc:
         print(f"[Warning] DB table initialization: {exc}")
 

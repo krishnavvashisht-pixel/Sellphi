@@ -39,6 +39,9 @@ class OpportunityRepository:
                 existing.subject_line = payload.subject_line
                 existing.email_body = payload.email_body
                 existing.follow_up_email = payload.follow_up_email
+                existing.step3_email = payload.step3_email or existing.step3_email
+                existing.step4_breakup = payload.step4_breakup or existing.step4_breakup
+                existing.tone = payload.tone or existing.tone
             await self.session.commit()
             await self.session.refresh(existing)
             return existing
@@ -56,6 +59,9 @@ class OpportunityRepository:
             subject_line=payload.subject_line,
             email_body=payload.email_body,
             follow_up_email=payload.follow_up_email,
+            step3_email=payload.step3_email,
+            step4_breakup=payload.step4_breakup,
+            tone=payload.tone or "direct",
             status=payload.status,
             notes=payload.notes,
         )

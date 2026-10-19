@@ -530,3 +530,56 @@ tr:last-child td {
   font-size: 14px;
 }
 
+/* 4-Step Outreach Cadence Styling */
+.cadence-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.cadence-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: auto;
+}
+
+.cadence-tab-btn:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.cadence-tab-btn.active {
+  background: rgba(79, 140, 255, 0.15);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.step-badge-1 { background: rgba(79, 140, 255, 0.18); color: #70a5ff; border: 1px solid rgba(79, 140, 255, 0.3); }
+.step-badge-2 { background: rgba(62, 207, 142, 0.18); color: #5ce6a8; border: 1px solid rgba(62, 207, 142, 0.3); }
+.step-badge-3 { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.step-badge-4 { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+

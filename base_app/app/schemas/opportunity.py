@@ -17,6 +17,9 @@ class OpportunityCreate(BaseModel):
     subject_line: str | None = None
     email_body: str | None = None
     follow_up_email: str | None = None
+    step3_email: str | None = None
+    step4_breakup: str | None = None
+    tone: str | None = "direct"
     status: str = "new"
     notes: str | None = None
 
@@ -28,6 +31,9 @@ class OpportunityUpdate(BaseModel):
     subject_line: str | None = None
     email_body: str | None = None
     follow_up_email: str | None = None
+    step3_email: str | None = None
+    step4_breakup: str | None = None
+    tone: str | None = None
 
 
 class OpportunityResponse(BaseModel):
@@ -46,6 +52,9 @@ class OpportunityResponse(BaseModel):
     subject_line: str | None = None
     email_body: str | None = None
     follow_up_email: str | None = None
+    step3_email: str | None = None
+    step4_breakup: str | None = None
+    tone: str | None = "direct"
     status: str
     notes: str | None = None
     created_at: datetime

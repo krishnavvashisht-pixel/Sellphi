@@ -67,6 +67,8 @@ class PitchRequest(BaseModel):
     sales_implication: str
     product_name: str | None = None
     product_description: str | None = None
+    tone: str = "direct"
+    custom_instructions: str | None = None
 
 
 class OutreachPitchResponse(BaseModel):
@@ -74,4 +76,8 @@ class OutreachPitchResponse(BaseModel):
     subject_line: str
     email_body: str
     follow_up_email: str
+    step2_email: str | None = None
+    step3_email: str | None = None
+    step4_breakup: str | None = None
+    tone: str = "direct"
 

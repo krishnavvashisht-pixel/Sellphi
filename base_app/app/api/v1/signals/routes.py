@@ -291,6 +291,8 @@ async def create_pitch(payload: PitchRequest) -> OutreachPitchResponse:
             sales_implication=payload.sales_implication,
             product_name=payload.product_name,
             product_description=payload.product_description,
+            tone=payload.tone,
+            custom_instructions=payload.custom_instructions,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to generate pitch with Gemini: {exc}") from exc

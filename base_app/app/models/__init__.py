@@ -9,6 +9,7 @@ from app.models.event import Event
 from app.models.mission import Mission
 from app.models.opportunity import Opportunity
 from app.models.product import Product
+from app.models.saved_search import SavedSearch
 from app.models.user import User
 from app.models.workspace import Workspace
 
@@ -19,6 +20,7 @@ __all__ = [
     "Mission",
     "Opportunity",
     "Product",
+    "SavedSearch",
     "User",
     "Workspace",
 ]

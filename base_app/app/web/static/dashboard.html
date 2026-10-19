@@ -124,8 +124,8 @@
         <h1 style="margin-bottom:8px;">Market Signal Radar</h1>
         <p class="subtitle" style="margin-bottom:16px;">Scan Google News RSS feeds for real buying signals and have Gemini analyze sales opportunities.</p>
         
-        <div class="scan-form-row">
-          <input type="text" id="query-input" placeholder="e.g. new manufacturing plant expansion" value="new manufacturing plant OR factory expansion India" />
+        <div class="scan-form-row" style="flex-wrap:wrap;">
+          <input type="text" id="query-input" placeholder="e.g. new manufacturing plant expansion" value="new manufacturing plant OR factory expansion India" style="min-width:280px;" />
           <select id="region-select" style="padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-size:14px;">
             <option value="IN" selected>🇮🇳 India Edition</option>
             <option value="US">🇺🇸 Global / US</option>
@@ -136,14 +136,42 @@
             <option value="10">10 items</option>
           </select>
           <button id="scan-btn" type="button">Scan Signals with Gemini</button>
+          <button id="save-search-btn" type="button" class="tag-btn" style="background:rgba(255,255,255,0.06); color:var(--text); border:1px solid var(--border); padding:10px 14px; font-weight:600; white-space:nowrap;" onclick="openSaveSearchModal()">
+            ⭐ Save Search Profile
+          </button>
         </div>
 
-        <div class="tags-row" id="quick-tags-container">
-          <span>Quick searches:</span>
-          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing plant OR factory expansion India')">Plant Expansion (India)</button>
-          <button class="tag-btn" type="button" onclick="setQuery('manufacturing plant (EV OR auto OR component) India')">Auto & EV Plants</button>
-          <button class="tag-btn" type="button" onclick="setQuery('breaks ground manufacturing plant India')">Plant Groundbreaking</button>
-          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing unit packaging India')">Packaging & Units</button>
+        <div class="tags-row" id="quick-tags-container" style="flex-wrap:wrap; gap:8px; align-items:center;">
+          <span style="font-weight:600; color:var(--muted); font-size:12px;">Presets:</span>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing plant OR factory expansion India', 'IN')">Plant Expansion (India)</button>
+          <button class="tag-btn" type="button" onclick="setQuery('manufacturing plant (EV OR auto OR component) India', 'IN')">Auto & EV Plants</button>
+          <button class="tag-btn" type="button" onclick="setQuery('breaks ground manufacturing plant India', 'IN')">Plant Groundbreaking</button>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing unit packaging India', 'IN')">Packaging & Units</button>
+        </div>
+
+        <!-- Workspace Saved Search Profiles & Alerts -->
+        <div id="saved-searches-box" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+          <span style="font-weight:600; color:var(--accent); font-size:12px;">⭐ Saved Profiles:</span>
+          <div id="saved-searches-container" style="display:inline-flex; flex-wrap:wrap; gap:8px; align-items:center;">
+            <span style="font-size:12px; color:var(--muted);">No saved profiles yet. Click "⭐ Save Search Profile" to bookmark a query.</span>
+          </div>
+        </div>
+
+        <!-- Feature 3: Outreach Cadence & Tone Settings -->
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="pitch-tone-select" style="font-size:12px; font-weight:600; color:var(--muted); margin:0; white-space:nowrap;">Outreach Tone:</label>
+            <select id="pitch-tone-select" style="padding:7px 12px; border-radius:6px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-size:13px; font-weight:500;">
+              <option value="direct" selected>⚡ Direct & Concise (Executive, 3-4 lines)</option>
+              <option value="analytical">🔬 Technical & Analytical (Metrics & Compliance)</option>
+              <option value="conversational">💬 Casual & Conversational (Peer-to-peer)</option>
+              <option value="consultative">👔 Consultative Advisor (Diagnostic & Advisory)</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:260px; display:flex; align-items:center; gap:8px;">
+            <label for="custom-instructions-input" style="font-size:12px; font-weight:600; color:var(--muted); margin:0; white-space:nowrap;">Custom Guidance:</label>
+            <input type="text" id="custom-instructions-input" placeholder="e.g. emphasize free 30-day trial, ISO compliance, or under 75 words" style="padding:7px 12px; font-size:13px; height:auto; margin:0;" />
+          </div>
         </div>
       </div>
 
@@ -235,6 +263,46 @@
     </div>
   </div>
 
+  <!-- Save Search Profile Modal -->
+  <div id="save-search-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size:18px; margin:0;">⭐ Save Search Profile & Alert</h2>
+        <button type="button" class="copy-btn" onclick="closeSaveSearchModal()">✕</button>
+      </div>
+      <form id="save-search-form" onsubmit="submitSaveSearch(event)">
+        <label for="search-profile-name">Profile Name *</label>
+        <input type="text" id="search-profile-name" placeholder="e.g. Auto EV Plants India" required />
+
+        <label for="search-profile-query">Search Query *</label>
+        <input type="text" id="search-profile-query" placeholder="e.g. breaks ground manufacturing plant India" required />
+
+        <div style="display:flex; gap:12px;">
+          <div style="flex:1;">
+            <label for="search-profile-region">Region Edition</label>
+            <select id="search-profile-region" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-size:14px; margin-bottom:16px;">
+              <option value="IN">🇮🇳 India Edition</option>
+              <option value="US">🇺🇸 Global / US</option>
+            </select>
+          </div>
+          <div style="width:120px;">
+            <label for="search-profile-limit">Result Limit</label>
+            <select id="search-profile-limit" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:#0d0f13; color:var(--text); font-size:14px; margin-bottom:16px;">
+              <option value="3">3 items</option>
+              <option value="5" selected>5 items</option>
+              <option value="10">10 items</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" class="secondary" style="width:auto;" onclick="closeSaveSearchModal()">Cancel</button>
+          <button type="submit" style="width:auto; background:var(--accent); color:white;">Save Profile & Alert</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/static/app.js"></script>
   <script>
     let currentWorkspace = null;
@@ -243,6 +311,7 @@
     let currentSignals = [];
     let generatedPitches = {};
     let pipelineList = [];
+    let savedSearchesList = [];
     let activeFilter = 'all';
     let currentView = 'radar';
 
@@ -255,12 +324,165 @@
           currentWorkspace = await res.json();
           document.getElementById('workspace-title').textContent = currentWorkspace.name;
           await loadProducts();
+          await loadSavedSearches();
           await loadPipelineOpportunities();
         } else {
           document.getElementById('workspace-title').textContent = 'Default Local Workspace';
         }
       } catch (err) {
         document.getElementById('workspace-title').textContent = 'Local Workspace';
+      }
+    }
+
+    // Saved Search Profiles & Custom Alerts Logic
+    async function loadSavedSearches() {
+      if (!currentWorkspace) return;
+      try {
+        const res = await apiFetch(`/saved-searches?workspace_id=${currentWorkspace.id}`);
+        if (res.ok) {
+          savedSearchesList = await res.json();
+          renderSavedSearches();
+        }
+      } catch (err) {
+        console.error('Failed to load saved searches', err);
+      }
+    }
+
+    function renderSavedSearches() {
+      const container = document.getElementById('saved-searches-container');
+      if (!container) return;
+      if (!savedSearchesList.length) {
+        container.innerHTML = `<span style="font-size:12px; color:var(--muted);">No saved profiles yet. Click "⭐ Save Search Profile" to bookmark a query.</span>`;
+        return;
+      }
+
+      container.innerHTML = savedSearchesList.map(item => `
+        <div class="tag-btn" style="display:inline-flex; align-items:center; gap:6px; background:rgba(79, 140, 255, 0.12); border-color:rgba(79, 140, 255, 0.35); color:var(--text); padding:4px 10px;">
+          <span style="cursor:pointer;" onclick="executeSavedSearch('${escapeAttr(item.query)}', '${escapeAttr(item.region)}', ${item.limit})">
+            🔔 <strong>${escapeHtml(item.name)}</strong> <span style="font-size:10px; opacity:0.8;">(${escapeHtml(item.region)})</span>
+          </span>
+          <button type="button" style="background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; padding:0 2px; line-height:1;" onclick="deleteSavedSearch('${item.id}', '${escapeAttr(item.name)}', event)" title="Delete saved profile">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function openSaveSearchModal() {
+      const currentQ = document.getElementById('query-input').value.trim();
+      const currentReg = document.getElementById('region-select').value;
+      const currentLim = document.getElementById('limit-select').value;
+
+      document.getElementById('search-profile-name').value = '';
+      document.getElementById('search-profile-query').value = currentQ;
+      document.getElementById('search-profile-region').value = currentReg;
+      document.getElementById('search-profile-limit').value = currentLim;
+      document.getElementById('save-search-modal').style.display = 'flex';
+      document.getElementById('search-profile-name').focus();
+    }
+
+    function closeSaveSearchModal() {
+      document.getElementById('save-search-modal').style.display = 'none';
+    }
+
+    async function submitSaveSearch(e) {
+      e.preventDefault();
+      if (!currentWorkspace) {
+        alert('Active workspace not ready.');
+        return;
+      }
+
+      const name = document.getElementById('search-profile-name').value.trim();
+      const query = document.getElementById('search-profile-query').value.trim();
+      const region = document.getElementById('search-profile-region').value;
+      const limit = parseInt(document.getElementById('search-profile-limit').value, 10);
+
+      try {
+        const res = await apiFetch('/saved-searches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspace_id: currentWorkspace.id,
+            name,
+            query,
+            region,
+            limit
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Failed to save search profile');
+        }
+
+        closeSaveSearchModal();
+        showStatus(`Saved search profile "${name}" successfully!`, 'ok');
+        await loadSavedSearches();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function deleteSavedSearch(id, name, event) {
+      if (event) event.stopPropagation();
+      if (!confirm(`Delete saved search profile "${name}"?`)) return;
+
+      try {
+        const res = await apiFetch(`/saved-searches/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          savedSearchesList = savedSearchesList.filter(s => s.id !== id);
+          renderSavedSearches();
+        } else {
+          alert('Failed to delete search profile.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function executeSavedSearch(query, region, limit) {
+      document.getElementById('query-input').value = query;
+      if (region) document.getElementById('region-select').value = region;
+      if (limit) document.getElementById('limit-select').value = limit;
+      scanSignals();
+    }
+
+    // Helper: Format Tone
+    function formatTone(tone) {
+      const map = {
+        direct: '⚡ Direct & Concise',
+        analytical: '🔬 Technical & Analytical',
+        conversational: '💬 Casual & Conversational',
+        consultative: '👔 Consultative Advisor'
+      };
+      return map[tone] || tone || '⚡ Direct & Concise';
+    }
+
+    // Helper: Switch Cadence Step for Radar Pitches
+    function switchPitchStep(cardId, stepNum) {
+      for (let i = 1; i <= 4; i++) {
+        const tab = document.getElementById(`tab-btn-${cardId}-${i}`);
+        const panel = document.getElementById(`step-panel-${cardId}-${i}`);
+        if (tab) {
+          if (i === stepNum) tab.classList.add('active');
+          else tab.classList.remove('active');
+        }
+        if (panel) {
+          panel.style.display = i === stepNum ? 'block' : 'none';
+        }
+      }
+    }
+
+    // Helper: Switch Cadence Step for Pipeline Opportunities
+    function switchPipelineStep(oppId, stepNum) {
+      for (let i = 1; i <= 4; i++) {
+        const tab = document.getElementById(`opp-tab-btn-${oppId}-${i}`);
+        const panel = document.getElementById(`opp-step-panel-${oppId}-${i}`);
+        if (tab) {
+          if (i === stepNum) tab.classList.add('active');
+          else tab.classList.remove('active');
+        }
+        if (panel) {
+          panel.style.display = i === stepNum ? 'block' : 'none';
+        }
       }
     }
 
@@ -346,21 +568,21 @@
         document.getElementById('query-input').value = 'new manufacturing plant OR factory expansion India';
         if (regionSelect) regionSelect.value = 'IN';
         tagsContainer.innerHTML = `
-          <span>Quick searches:</span>
-          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing plant OR factory expansion India')">Plant Expansion (India)</button>
-          <button class="tag-btn" type="button" onclick="setQuery('manufacturing plant (EV OR auto OR component) India')">Auto & EV Plants</button>
-          <button class="tag-btn" type="button" onclick="setQuery('breaks ground manufacturing plant India')">Plant Groundbreaking</button>
-          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing unit packaging India')">Packaging & Units</button>
+          <span style="font-weight:600; color:var(--muted); font-size:12px;">Presets:</span>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing plant OR factory expansion India', 'IN')">Plant Expansion (India)</button>
+          <button class="tag-btn" type="button" onclick="setQuery('manufacturing plant (EV OR auto OR component) India', 'IN')">Auto & EV Plants</button>
+          <button class="tag-btn" type="button" onclick="setQuery('breaks ground manufacturing plant India', 'IN')">Plant Groundbreaking</button>
+          <button class="tag-btn" type="button" onclick="setQuery('new manufacturing unit packaging India', 'IN')">Packaging & Units</button>
         `;
       } else {
         document.getElementById('query-input').value = 'series A funding SaaS';
         if (regionSelect) regionSelect.value = 'US';
         tagsContainer.innerHTML = `
-          <span>Quick searches:</span>
-          <button class="tag-btn" type="button" onclick="setQuery('series A funding SaaS')">Series A SaaS</button>
-          <button class="tag-btn" type="button" onclick="setQuery('seed funding AI startup')">Seed AI Startup</button>
-          <button class="tag-btn" type="button" onclick="setQuery('hiring VP of Sales SaaS')">VP Sales Hiring</button>
-          <button class="tag-btn" type="button" onclick="setQuery('series B funding enterprise software')">Series B Enterprise</button>
+          <span style="font-weight:600; color:var(--muted); font-size:12px;">Presets:</span>
+          <button class="tag-btn" type="button" onclick="setQuery('series A funding SaaS', 'US')">Series A SaaS</button>
+          <button class="tag-btn" type="button" onclick="setQuery('seed funding AI startup', 'US')">Seed AI Startup</button>
+          <button class="tag-btn" type="button" onclick="setQuery('hiring VP of Sales SaaS', 'US')">VP Sales Hiring</button>
+          <button class="tag-btn" type="button" onclick="setQuery('series B funding enterprise software', 'US')">Series B Enterprise</button>
         `;
       }
     }
@@ -449,8 +671,9 @@
     }
 
     // 7. Signal Scanner & Pitch Logic
-    function setQuery(q) {
+    function setQuery(q, r = null) {
       document.getElementById('query-input').value = q;
+      if (r) document.getElementById('region-select').value = r;
     }
 
     function showStatus(text, kind = 'info') {
@@ -604,19 +827,22 @@
       const activeProd = productsList.find(p => p.id === selectedProductId);
       const prodName = activeProd ? activeProd.name : 'Sellphi';
       const prodDesc = activeProd ? activeProd.description : null;
+      const toneSelect = document.getElementById('pitch-tone-select');
+      const tone = toneSelect ? toneSelect.value : 'direct';
+      const customNotes = document.getElementById('custom-instructions-input') ? document.getElementById('custom-instructions-input').value.trim() : '';
 
       if (pitchBtn) {
         pitchBtn.disabled = true;
-        pitchBtn.innerHTML = '<span class="spinner"></span> Writing Outreach...';
+        pitchBtn.innerHTML = '<span class="spinner"></span> Writing Cadence...';
       }
 
       targetDiv.innerHTML = `
         <div style="padding:18px 20px; background:#111419; border:1px solid rgba(79, 140, 255, 0.35); border-radius:10px; margin-top:14px; display:flex; align-items:center; gap:16px;">
           <div class="spinner spinner-accent spinner-lg" style="margin:0; width:28px; height:28px; border-width:3px; flex-shrink:0;"></div>
           <div>
-            <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:3px;">Gemini is writing your 1-to-1 outreach...</div>
+            <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:3px;">Gemini is writing your 4-step outreach cadence...</div>
             <div style="font-size:12px; color:var(--muted); line-height:1.4;">
-              Analyzing company news triggers, identifying key decision-maker for <strong>${escapeHtml(prodName)}</strong>, and generating subject line + cold email + follow-up.
+              Analyzing company news triggers, tailoring tone (<strong>${formatTone(tone)}</strong>), and generating a full 4-touchpoint cadence for <strong>${escapeHtml(prodName)}</strong>.
             </div>
           </div>
         </div>
@@ -631,7 +857,9 @@
             evidence: s.evidence,
             sales_implication: s.sales_implication,
             product_name: prodName,
-            product_description: prodDesc
+            product_description: prodDesc,
+            tone: tone,
+            custom_instructions: customNotes || null
           })
         });
 
@@ -641,42 +869,94 @@
         }
 
         const pitch = await response.json();
+        pitch.tone = pitch.tone || tone;
         generatedPitches[link] = pitch;
+
+        const step1Body = pitch.email_body || '';
+        const step2Body = pitch.step2_email || pitch.follow_up_email || '';
+        const step3Body = pitch.step3_email || '';
+        const step4Body = pitch.step4_breakup || '';
 
         targetDiv.innerHTML = `
           <div class="pitch-box">
             <div class="pitch-header" style="flex-wrap:wrap; gap:10px;">
-              <span>🎯 Outreach Package (Gemini) — Pitching: <u>${escapeHtml(prodName)}</u> to ${escapeHtml(pitch.target_persona)}</span>
+              <div>
+                <span style="font-weight:600; font-size:14px;">🎯 4-Step Outreach Cadence</span>
+                <span style="font-size:12px; color:var(--muted); margin-left:6px;">Pitching <u>${escapeHtml(prodName)}</u> to <strong>${escapeHtml(pitch.target_persona)}</strong></span>
+                <span class="badge" style="background:rgba(79, 140, 255, 0.15); color:var(--accent); font-size:11px; margin-left:6px;">${formatTone(pitch.tone)}</span>
+              </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <a href="${getLinkedInSearchUrl(s.company_name, pitch.target_persona)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-linkedin">
                   🔍 Find on LinkedIn ↗
                 </a>
-                <a href="${getGmailComposeUrl(pitch.subject_line, pitch.email_body)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-gmail">
+                <a href="${getGmailComposeUrl(pitch.subject_line, step1Body)}" target="_blank" rel="noopener noreferrer" class="action-pill action-pill-gmail">
                   📨 Open in Gmail ↗
                 </a>
               </div>
             </div>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:12px; color:var(--muted); font-weight:600;">SUBJECT LINE</span>
-              <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.subject_line)}', this)">Copy Subject</button>
-            </div>
-            <pre class="pitch-content-pre">${escapeHtml(pitch.subject_line)}</pre>
 
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:12px; color:var(--muted); font-weight:600;">COLD OUTREACH EMAIL</span>
-              <div style="display:flex; gap:8px;">
-                <a href="mailto:?subject=${encodeURIComponent(pitch.subject_line)}&body=${encodeURIComponent(pitch.email_body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
-                <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.email_body)}', this)">Copy Email</button>
+            <!-- Cadence Step Tabs -->
+            <div class="cadence-tabs" id="cadence-tabs-${cardId}">
+              <button type="button" class="cadence-tab-btn active" id="tab-btn-${cardId}-1" onclick="switchPitchStep('${cardId}', 1)">1️⃣ Day 1: Hook</button>
+              <button type="button" class="cadence-tab-btn" id="tab-btn-${cardId}-2" onclick="switchPitchStep('${cardId}', 2)">2️⃣ Day 3: ROI Proof</button>
+              <button type="button" class="cadence-tab-btn" id="tab-btn-${cardId}-3" onclick="switchPitchStep('${cardId}', 3)">3️⃣ Day 7: Soft Push</button>
+              <button type="button" class="cadence-tab-btn" id="tab-btn-${cardId}-4" onclick="switchPitchStep('${cardId}', 4)">4️⃣ Day 14: Breakup</button>
+            </div>
+
+            <!-- Step 1 Panel -->
+            <div id="step-panel-${cardId}-1">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div class="step-badge step-badge-1">STEP 1 • DAY 1 • INITIAL COLD OUTREACH</div>
+                <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.subject_line)}', this)">Copy Subject</button>
               </div>
-            </div>
-            <pre class="pitch-content-pre">${escapeHtml(pitch.email_body)}</pre>
+              <div style="font-size:11px; color:var(--muted); font-weight:600; margin-bottom:2px;">SUBJECT LINE</div>
+              <pre class="pitch-content-pre" style="margin-bottom:12px;">${escapeHtml(pitch.subject_line)}</pre>
 
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:12px; color:var(--muted); font-weight:600;">DAY 3 FOLLOW-UP</span>
-              <button class="copy-btn" onclick="copyText('${escapeAttr(pitch.follow_up_email)}', this)">Copy Follow-up</button>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div style="font-size:11px; color:var(--muted); font-weight:600;">EMAIL BODY</div>
+                <div style="display:flex; gap:8px;">
+                  <a href="mailto:?subject=${encodeURIComponent(pitch.subject_line)}&body=${encodeURIComponent(step1Body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                  <button class="copy-btn" onclick="copyText('${escapeAttr(step1Body)}', this)">Copy Email</button>
+                </div>
+              </div>
+              <pre class="pitch-content-pre">${escapeHtml(step1Body)}</pre>
             </div>
-            <pre class="pitch-content-pre">${escapeHtml(pitch.follow_up_email)}</pre>
+
+            <!-- Step 2 Panel -->
+            <div id="step-panel-${cardId}-2" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div class="step-badge step-badge-2">STEP 2 • DAY 3 • CONCRETE PROOF & ROI</div>
+                <div style="display:flex; gap:8px;">
+                  <a href="mailto:?subject=Re: ${encodeURIComponent(pitch.subject_line)}&body=${encodeURIComponent(step2Body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                  <button class="copy-btn" onclick="copyText('${escapeAttr(step2Body)}', this)">Copy Step 2</button>
+                </div>
+              </div>
+              <pre class="pitch-content-pre">${escapeHtml(step2Body || '(No Step 2 generated)')}</pre>
+            </div>
+
+            <!-- Step 3 Panel -->
+            <div id="step-panel-${cardId}-3" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div class="step-badge step-badge-3">STEP 3 • DAY 7 • SOFT PUSH & VENDOR INERTIA</div>
+                <div style="display:flex; gap:8px;">
+                  <a href="mailto:?subject=Re: ${encodeURIComponent(pitch.subject_line)}&body=${encodeURIComponent(step3Body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                  <button class="copy-btn" onclick="copyText('${escapeAttr(step3Body)}', this)">Copy Step 3</button>
+                </div>
+              </div>
+              <pre class="pitch-content-pre">${escapeHtml(step3Body || '(No Step 3 generated)')}</pre>
+            </div>
+
+            <!-- Step 4 Panel -->
+            <div id="step-panel-${cardId}-4" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div class="step-badge step-badge-4">STEP 4 • DAY 14 • POLITE BREAKUP & DOOR OPEN</div>
+                <div style="display:flex; gap:8px;">
+                  <a href="mailto:?subject=Re: ${encodeURIComponent(pitch.subject_line)}&body=${encodeURIComponent(step4Body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                  <button class="copy-btn" onclick="copyText('${escapeAttr(step4Body)}', this)">Copy Step 4</button>
+                </div>
+              </div>
+              <pre class="pitch-content-pre">${escapeHtml(step4Body || '(No Step 4 generated)')}</pre>
+            </div>
           </div>
         `;
       } catch (err) {
@@ -684,7 +964,7 @@
       } finally {
         if (pitchBtn) {
           pitchBtn.disabled = false;
-          pitchBtn.innerHTML = '✨ Regenerate Pitch with Gemini';
+          pitchBtn.innerHTML = '✨ Regenerate 4-Step Cadence';
         }
       }
     }
@@ -733,7 +1013,10 @@
             target_persona: pitchData.target_persona || null,
             subject_line: pitchData.subject_line || null,
             email_body: pitchData.email_body || null,
-            follow_up_email: pitchData.follow_up_email || null,
+            follow_up_email: pitchData.follow_up_email || pitchData.step2_email || null,
+            step3_email: pitchData.step3_email || null,
+            step4_breakup: pitchData.step4_breakup || null,
+            tone: pitchData.tone || (document.getElementById('pitch-tone-select') ? document.getElementById('pitch-tone-select').value : 'direct'),
             status: 'new'
           })
         });
@@ -852,7 +1135,7 @@
                   📨 Open in Gmail ↗
                 </a>
                 <button type="button" class="action-pill" onclick="togglePitchDrawer('${opp.id}')">
-                  📋 View Outreach Email
+                  📋 View Outreach Cadence
                 </button>
               ` : `
                 <span style="font-size:12px; color:var(--muted);">(No pitch generated yet. Generate pitch in Radar view.)</span>
@@ -861,28 +1144,73 @@
 
             ${hasPitch ? `
               <div id="opp-pitch-drawer-${opp.id}" style="display:none; margin-top:14px; padding:16px; background:#090b0e; border-radius:8px; border:1px solid var(--border);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                  <span style="font-size:11px; font-weight:600; color:var(--muted);">SUBJECT</span>
-                  <button class="copy-btn" onclick="copyText('${escapeAttr(opp.subject_line)}', this)">Copy</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <span style="font-size:12px; font-weight:600; color:var(--text);">Outreach Cadence Sequence</span>
+                  ${opp.tone ? `<span class="badge" style="font-size:11px;">Tone: ${formatTone(opp.tone)}</span>` : ''}
                 </div>
-                <div style="font-size:13px; color:var(--text); margin-bottom:10px; font-weight:500;">${escapeHtml(opp.subject_line)}</div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                  <span style="font-size:11px; font-weight:600; color:var(--muted);">COLD OUTREACH EMAIL</span>
-                  <div style="display:flex; gap:8px;">
-                    <a href="mailto:?subject=${encodeURIComponent(opp.subject_line)}&body=${encodeURIComponent(opp.email_body)}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
-                    <button class="copy-btn" onclick="copyText('${escapeAttr(opp.email_body)}', this)">Copy</button>
-                  </div>
+                <!-- Pipeline Cadence Tabs -->
+                <div class="cadence-tabs" id="opp-cadence-tabs-${opp.id}">
+                  <button type="button" class="cadence-tab-btn active" id="opp-tab-btn-${opp.id}-1" onclick="switchPipelineStep('${opp.id}', 1)">1️⃣ Day 1: Hook</button>
+                  <button type="button" class="cadence-tab-btn" id="opp-tab-btn-${opp.id}-2" onclick="switchPipelineStep('${opp.id}', 2)">2️⃣ Day 3: ROI Proof</button>
+                  <button type="button" class="cadence-tab-btn" id="opp-tab-btn-${opp.id}-3" onclick="switchPipelineStep('${opp.id}', 3)">3️⃣ Day 7: Soft Push</button>
+                  <button type="button" class="cadence-tab-btn" id="opp-tab-btn-${opp.id}-4" onclick="switchPipelineStep('${opp.id}', 4)">4️⃣ Day 14: Breakup</button>
                 </div>
-                <pre class="pitch-content-pre" style="margin:0 0 10px;">${escapeHtml(opp.email_body)}</pre>
 
-                ${opp.follow_up_email ? `
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <span style="font-size:11px; font-weight:600; color:var(--muted);">DAY 3 FOLLOW-UP</span>
-                    <button class="copy-btn" onclick="copyText('${escapeAttr(opp.follow_up_email)}', this)">Copy</button>
+                <!-- Pipeline Step 1 Panel -->
+                <div id="opp-step-panel-${opp.id}-1">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div class="step-badge step-badge-1">STEP 1 • DAY 1 • INITIAL COLD OUTREACH</div>
+                    <button class="copy-btn" onclick="copyText('${escapeAttr(opp.subject_line || '')}', this)">Copy Subject</button>
                   </div>
-                  <pre class="pitch-content-pre" style="margin:0;">${escapeHtml(opp.follow_up_email)}</pre>
-                ` : ''}
+                  <div style="font-size:11px; color:var(--muted); font-weight:600; margin-bottom:2px;">SUBJECT</div>
+                  <pre class="pitch-content-pre" style="margin:0 0 10px;">${escapeHtml(opp.subject_line || '')}</pre>
+
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-size:11px; color:var(--muted); font-weight:600;">EMAIL BODY</div>
+                    <div style="display:flex; gap:8px;">
+                      <a href="mailto:?subject=${encodeURIComponent(opp.subject_line || '')}&body=${encodeURIComponent(opp.email_body || '')}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                      <button class="copy-btn" onclick="copyText('${escapeAttr(opp.email_body || '')}', this)">Copy Email</button>
+                    </div>
+                  </div>
+                  <pre class="pitch-content-pre" style="margin:0;">${escapeHtml(opp.email_body || '')}</pre>
+                </div>
+
+                <!-- Pipeline Step 2 Panel -->
+                <div id="opp-step-panel-${opp.id}-2" style="display:none;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div class="step-badge step-badge-2">STEP 2 • DAY 3 • CONCRETE PROOF & ROI</div>
+                    <div style="display:flex; gap:8px;">
+                      <a href="mailto:?subject=Re: ${encodeURIComponent(opp.subject_line || '')}&body=${encodeURIComponent(opp.follow_up_email || '')}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                      <button class="copy-btn" onclick="copyText('${escapeAttr(opp.follow_up_email || '')}', this)">Copy Step 2</button>
+                    </div>
+                  </div>
+                  <pre class="pitch-content-pre" style="margin:0;">${escapeHtml(opp.follow_up_email || '(No Step 2 generated)')}</pre>
+                </div>
+
+                <!-- Pipeline Step 3 Panel -->
+                <div id="opp-step-panel-${opp.id}-3" style="display:none;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div class="step-badge step-badge-3">STEP 3 • DAY 7 • SOFT PUSH & VENDOR INERTIA</div>
+                    <div style="display:flex; gap:8px;">
+                      <a href="mailto:?subject=Re: ${encodeURIComponent(opp.subject_line || '')}&body=${encodeURIComponent(opp.step3_email || '')}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                      <button class="copy-btn" onclick="copyText('${escapeAttr(opp.step3_email || '')}', this)">Copy Step 3</button>
+                    </div>
+                  </div>
+                  <pre class="pitch-content-pre" style="margin:0;">${escapeHtml(opp.step3_email || '(No Step 3 generated)')}</pre>
+                </div>
+
+                <!-- Pipeline Step 4 Panel -->
+                <div id="opp-step-panel-${opp.id}-4" style="display:none;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div class="step-badge step-badge-4">STEP 4 • DAY 14 • POLITE BREAKUP & DOOR OPEN</div>
+                    <div style="display:flex; gap:8px;">
+                      <a href="mailto:?subject=Re: ${encodeURIComponent(opp.subject_line || '')}&body=${encodeURIComponent(opp.step4_breakup || '')}" class="copy-btn" style="text-decoration:none;">📬 Mailto</a>
+                      <button class="copy-btn" onclick="copyText('${escapeAttr(opp.step4_breakup || '')}', this)">Copy Step 4</button>
+                    </div>
+                  </div>
+                  <pre class="pitch-content-pre" style="margin:0;">${escapeHtml(opp.step4_breakup || '(No Step 4 generated)')}</pre>
+                </div>
               </div>
             ` : ''}
           </div>
@@ -934,15 +1262,18 @@
         return;
       }
 
-      const headers = ['Company', 'Domain', 'Stage', 'Target Persona', 'Subject Line', 'Cold Email', 'Day 3 Follow Up', 'Trigger Evidence', 'Article Link', 'Fit Score', 'Saved At'];
+      const headers = ['Company', 'Domain', 'Stage', 'Target Persona', 'Tone', 'Subject Line', 'Day 1 Hook', 'Day 3 Proof & ROI', 'Day 7 Vendor Inertia', 'Day 14 Breakup', 'Trigger Evidence', 'Article Link', 'Fit Score', 'Saved At'];
       const rows = pipelineList.map(opp => [
         opp.company_name,
         opp.company_domain || '',
         opp.status,
         opp.target_persona || '',
+        opp.tone || 'direct',
         opp.subject_line || '',
         opp.email_body || '',
         opp.follow_up_email || '',
+        opp.step3_email || '',
+        opp.step4_breakup || '',
         opp.evidence,
         opp.article_link,
         (opp.score || 0).toFixed(2),

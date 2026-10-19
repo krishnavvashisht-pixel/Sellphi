@@ -31,6 +31,9 @@ class Opportunity(UUIDPrimaryKeyMixin, Base):
     subject_line: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_body: Mapped[str | None] = mapped_column(Text, nullable=True)
     follow_up_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    step3_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    step4_breakup: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tone: Mapped[str | None] = mapped_column(String(50), default="direct", nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="new", nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
