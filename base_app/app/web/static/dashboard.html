@@ -68,14 +68,21 @@
 </head>
 <body class="admin-body">
   <div class="topbar">
-    <div style="display:flex; align-items:center; gap:16px;">
-      <strong>⚡ Sellphi AI SDR</strong>
-      <a href="/dashboard" style="color:var(--accent); text-decoration:none; font-weight:600; font-size:14px;">Radar & Products</a>
-      <a href="/admin" style="color:var(--muted); text-decoration:none; font-size:14px;">Admin</a>
+    <div style="display:flex; align-items:center; gap:20px;">
+      <a href="/dashboard" class="brand-badge">
+        <div class="brand-logo-icon">⚡</div>
+        <span>Sellphi</span>
+        <span class="brand-tag-pill">AI SDR</span>
+      </a>
+      <a href="/dashboard" class="nav-link active">Radar & Products</a>
+      <a href="/admin" class="nav-link">Admin Console</a>
     </div>
-    <div style="display:flex; align-items:center;">
-      <span class="who" id="who">Checking user...</span>
-      <button class="secondary" id="logout" type="button" style="width:auto; margin-left:12px; padding:6px 12px;">Log out</button>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="user-pill">
+        <span class="user-status-dot"></span>
+        <span id="who">Checking user...</span>
+      </div>
+      <button class="secondary" id="logout" type="button" style="width:auto; padding:7px 14px; font-size:13px;">Log out</button>
     </div>
   </div>
 
@@ -83,12 +90,12 @@
     <!-- Workspace & Product Section -->
     <div class="workspace-banner">
       <div>
-        <div style="font-size:12px; color:var(--muted); text-transform:uppercase; font-weight:600;">Active Workspace</div>
-        <div style="font-size:18px; font-weight:700; margin-top:2px;" id="workspace-title">Loading Workspace...</div>
+        <div style="font-size:11.5px; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:0.06em;">Active Organization & Workspace</div>
+        <div style="font-size:22px; font-weight:800; color:#ffffff; margin-top:3px; letter-spacing:-0.02em;" id="workspace-title">Loading Workspace...</div>
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
-        <button type="button" class="tag-btn" style="background:var(--accent); color:white; padding:8px 14px; font-weight:600;" onclick="openAddProductModal()">
-          + Add Product
+        <button type="button" class="tag-btn" style="background:var(--accent-gradient); color:white; padding:9px 18px; font-weight:600; box-shadow:0 4px 14px rgba(99,102,241,0.35); border:none;" onclick="openAddProductModal()">
+          + Add Product Offering
         </button>
       </div>
     </div>
@@ -531,18 +538,18 @@
             <div class="product-card-header">
               <div>
                 <div class="product-name">${escapeHtml(p.name)}</div>
-                <div style="font-size:12px; color:var(--muted);">${escapeHtml(p.category || 'General')}</div>
+                <div style="font-size:12px; color:#a5b4fc; font-weight:500;">${escapeHtml(p.category || 'B2B Offering')}</div>
               </div>
-              <button type="button" class="tag-btn" style="color:var(--danger); border-color:rgba(255,92,92,0.3); padding:2px 8px; font-size:11px;" onclick="removeProduct(event, '${p.id}', '${escapeAttr(p.name)}')">✕ Remove</button>
+              <button type="button" class="tag-btn" style="color:var(--danger); border-color:rgba(244,63,94,0.3); padding:3px 8px; font-size:11px;" onclick="removeProduct(event, '${p.id}', '${escapeAttr(p.name)}')">✕ Remove</button>
             </div>
-            <div style="font-size:12px; color:#cbd5e1; line-height:1.4; margin-top:6px;">
+            <div style="font-size:12.5px; color:#94a3b8; line-height:1.45; margin-top:8px;">
               ${escapeHtml(p.description || '(No description provided)')}
             </div>
-            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
               <span class="badge ${isSelected ? 'active' : ''}" style="font-size:11px;">
-                ${isSelected ? '✓ Active for Pitching' : 'Click to select'}
+                ${isSelected ? '● Active for Outreach' : 'Click to activate'}
               </span>
-              ${p.website ? `<a href="${escapeHtml(p.website)}" target="_blank" style="font-size:12px; color:var(--accent); text-decoration:none;" onclick="event.stopPropagation()">Website ↗</a>` : ''}
+              ${p.website ? `<a href="${escapeHtml(p.website)}" target="_blank" style="font-size:12px; color:#a5b4fc; text-decoration:none; font-weight:600;" onclick="event.stopPropagation()">Website ↗</a>` : ''}
             </div>
           </div>
         `;
@@ -800,16 +807,18 @@
             </div>
 
             <div class="signal-body-section">
-              <div><strong>Trigger Evidence:</strong> ${escapeHtml(s.evidence)}</div>
-              <div style="margin-top:6px;"><strong>Sales Implication:</strong> ${escapeHtml(s.sales_implication)}</div>
+              <div style="font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#a5b4fc; margin-bottom:4px;">📌 Trigger Evidence</div>
+              <div style="color:#e2e8f0; margin-bottom:10px;">${escapeHtml(s.evidence)}</div>
+              <div style="font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#34d399; margin-bottom:4px;">💡 Strategic Sales Angle</div>
+              <div style="color:#cbd5e1;">${escapeHtml(s.sales_implication)}</div>
             </div>
 
-            <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
-              <button type="button" id="save-btn-${cardId}" class="tag-btn" style="background:rgba(255, 255, 255, 0.08); color:var(--text); border:1px solid var(--border); font-weight:600; padding:8px 14px;" onclick="saveOpportunityFromSignal('${escapeAttr(s.link)}', '${cardId}')">
+            <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+              <button type="button" id="save-btn-${cardId}" class="tag-btn" style="background:rgba(255, 255, 255, 0.05); color:var(--text); border:1px solid var(--border); font-weight:600; padding:8px 16px;" onclick="saveOpportunityFromSignal('${escapeAttr(s.link)}', '${cardId}')">
                 ⭐ Save to Pipeline
               </button>
-              <button type="button" id="pitch-btn-${cardId}" class="tag-btn" style="${isKept ? 'background:var(--accent); color:white;' : 'background:rgba(255, 255, 255, 0.08); color:var(--text); border:1px solid var(--border);'} font-weight:600; padding:8px 14px;" onclick="generatePitch('${escapeAttr(s.link)}', '${cardId}')">
-                ✨ Generate Pitch with Gemini
+              <button type="button" id="pitch-btn-${cardId}" class="tag-btn" style="${isKept ? 'background:var(--accent-gradient); color:white; border:none; box-shadow:0 4px 14px rgba(99,102,241,0.35);' : 'background:rgba(255, 255, 255, 0.05); color:var(--text); border:1px solid var(--border);'} font-weight:600; padding:8px 16px;" onclick="generatePitch('${escapeAttr(s.link)}', '${cardId}')">
+                ✨ Generate 4-Step Cadence
               </button>
             </div>
             <div id="pitch-container-${cardId}"></div>

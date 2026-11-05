@@ -3,42 +3,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sellphi — Admin</title>
+  <title>Sellphi — Admin Console</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body class="admin-body">
   <div class="topbar">
-    <div style="display:flex; align-items:center; gap:16px;">
-      <strong>⚡ Sellphi admin</strong>
-      <a href="/dashboard" style="color:var(--muted); text-decoration:none; font-size:14px;">Signals & Outreach</a>
-      <a href="/admin" style="color:var(--accent); text-decoration:none; font-weight:600; font-size:14px;">Admin</a>
+    <div style="display:flex; align-items:center; gap:20px;">
+      <a href="/dashboard" class="brand-badge">
+        <div class="brand-logo-icon">⚡</div>
+        <span>Sellphi</span>
+        <span class="brand-tag-pill">ADMIN</span>
+      </a>
+      <a href="/dashboard" class="nav-link">Radar & Products</a>
+      <a href="/admin" class="nav-link active">Admin Console</a>
     </div>
-    <div>
-      <span class="who" id="who"></span>
-      <button class="secondary" id="logout" type="button" style="width:auto; margin-left:12px; padding:6px 12px;">Log out</button>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="user-pill">
+        <span class="user-status-dot"></span>
+        <span id="who">Checking admin...</span>
+      </div>
+      <button class="secondary" id="logout" type="button" style="width:auto; padding:7px 14px; font-size:13px;">Log out</button>
     </div>
   </div>
 
-  <div class="content">
-    <div id="message" class="message"></div>
-
-    <div id="denied" class="denied hidden">
-      <h1>Access denied</h1>
-      <p class="subtitle">This page is only visible to admins. Ask an existing admin to promote your account if you need access.</p>
+  <div class="content" style="max-width:960px; margin:40px auto; padding:0 24px;">
+    <div style="margin-bottom:28px;">
+      <h1 style="font-size:22px; margin-bottom:6px;">Workspace User Management</h1>
+      <p class="subtitle" style="margin:0;">Control system access, promote administrators, and manage active team members.</p>
     </div>
 
-    <table id="users-table" class="hidden">
-      <thead>
-        <tr>
-          <th>Email</th>
-          <th>Status</th>
-          <th>Role</th>
-          <th>Signed up</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="users-body"></tbody>
-    </table>
+    <div id="message" class="message"></div>
+
+    <div id="denied" class="denied hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:40px; margin-top:30px;">
+      <div style="font-size:36px; margin-bottom:12px;">🔒</div>
+      <h1 style="font-size:20px;">Access Denied</h1>
+      <p class="subtitle" style="margin-bottom:0;">This console is restricted to administrators. Ask an existing administrator to promote your account if you need access.</p>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table id="users-table" class="hidden">
+        <thead>
+          <tr>
+            <th>User Account</th>
+            <th>Status</th>
+            <th>Role</th>
+            <th>Registered</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
   </div>
 
   <script src="/static/app.js"></script>
@@ -65,24 +80,26 @@
         const row = document.createElement("tr");
 
         const statusBadge = user.is_active
-          ? '<span class="badge active">Active</span>'
+          ? '<span class="badge active"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span> Active</span>'
           : '<span class="badge inactive">Inactive</span>';
         const roleBadge = user.is_admin
           ? '<span class="badge admin">Admin</span>'
-          : "Regular";
+          : '<span style="color:var(--muted); font-size:13px;">Member</span>';
 
         const isSelf = user.id === me.id;
         const toggleActiveLabel = user.is_active ? "Deactivate" : "Activate";
         const toggleAdminLabel = user.is_admin ? "Remove admin" : "Make admin";
 
         row.innerHTML = `
-          <td>${user.email}${isSelf ? " (you)" : ""}</td>
+          <td>
+            <div style="font-weight:600; color:var(--text-heading);">${user.email} ${isSelf ? '<span class="badge" style="background:rgba(255,255,255,0.06); color:#cbd5e1; font-size:10px; margin-left:4px;">YOU</span>' : ''}</div>
+          </td>
           <td>${statusBadge}</td>
           <td>${roleBadge}</td>
-          <td>${new Date(user.created_at).toLocaleDateString()}</td>
+          <td style="color:var(--muted); font-size:13px;">${new Date(user.created_at).toLocaleDateString()}</td>
           <td class="row-actions">
-            <button data-action="toggle-active" data-id="${user.id}" data-value="${!user.is_active}">${toggleActiveLabel}</button>
-            <button data-action="toggle-admin" data-id="${user.id}" data-value="${!user.is_admin}">${toggleAdminLabel}</button>
+            <button class="secondary" data-action="toggle-active" data-id="${user.id}" data-value="${!user.is_active}" style="background:rgba(255,255,255,0.04);">${toggleActiveLabel}</button>
+            <button class="secondary" data-action="toggle-admin" data-id="${user.id}" data-value="${!user.is_admin}" style="background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3); color:#a5b4fc;">${toggleAdminLabel}</button>
           </td>
         `;
         body.appendChild(row);
@@ -92,7 +109,7 @@
     async function loadUsers() {
       const body = document.getElementById("users-body");
       if (body) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--muted);"><span class="spinner spinner-accent"></span> Loading users...</td></tr>';
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--muted);"><span class="spinner spinner-accent"></span> Loading user accounts...</td></tr>';
       }
       const response = await apiFetch("/admin/users");
       if (!response.ok) {

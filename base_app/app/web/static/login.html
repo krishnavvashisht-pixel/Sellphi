@@ -3,32 +3,106 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sellphi — Log in</title>
+  <title>Sellphi — Autonomous AI SDR</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .auth-wrapper {
+      width: 100%;
+      max-width: 440px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+    .brand-hero {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .brand-hero-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .brand-hero-logo h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.03em;
+      margin: 0;
+    }
+    .brand-hero-tag {
+      font-size: 13.5px;
+      color: var(--muted);
+      max-width: 320px;
+      margin: 0 auto;
+      line-height: 1.4;
+    }
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 12.5px;
+      color: #94a3b8;
+    }
+    .feature-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+  </style>
 </head>
 <body>
-  <div class="card">
-    <div class="tabs">
-      <button id="tab-login" class="active" type="button">Log in</button>
-      <button id="tab-signup" type="button">Sign up</button>
+  <div class="auth-wrapper">
+    <div class="brand-hero">
+      <div class="brand-hero-logo">
+        <div class="brand-logo-icon">⚡</div>
+        <h1>Sellphi</h1>
+        <span class="brand-tag-pill">AI SDR</span>
+      </div>
+      <p class="brand-hero-tag">Autonomous B2B outbound revenue engine with real-time buying signals & 4-step cadences.</p>
     </div>
 
-    <h1 id="heading">Welcome back</h1>
-    <p class="subtitle" id="subtitle">Log in to your Sellphi account.</p>
+    <div class="card">
+      <div class="tabs">
+        <button id="tab-login" class="active" type="button">Log in</button>
+        <button id="tab-signup" type="button">Sign up</button>
+      </div>
 
-    <div id="message" class="message"></div>
+      <h1 id="heading" style="font-size:20px; margin-bottom:4px;">Welcome back</h1>
+      <p class="subtitle" id="subtitle">Log in to access your sales radar and pipelines.</p>
 
-    <form id="form">
-      <label for="email">Email</label>
-      <input id="email" type="email" required autocomplete="email" />
+      <div id="message" class="message"></div>
 
-      <label for="password">Password</label>
-      <input id="password" type="password" required autocomplete="current-password" minlength="8" />
+      <form id="form">
+        <label for="email">Work Email</label>
+        <input id="email" type="email" placeholder="name@company.com" required autocomplete="email" />
 
-      <button id="submit" type="submit">Log in</button>
-    </form>
-    <div style="margin-top:20px; text-align:center;">
-      <a href="/dashboard" style="color:var(--accent); text-decoration:none; font-size:13px; font-weight:600;">⚡ Open AI SDR Dashboard directly &rarr;</a>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="••••••••" required autocomplete="current-password" minlength="8" />
+
+        <button id="submit" type="submit">Log in</button>
+      </form>
+
+      <div style="margin-top:20px; text-align:center;">
+        <a href="/dashboard" style="color:#a5b4fc; text-decoration:none; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+          <span>⚡ Enter Dashboard directly</span> &rarr;
+        </a>
+      </div>
+
+      <div class="feature-list">
+        <div class="feature-item"><span class="feature-dot"></span> Real Google News buying signals (expansions, plants, funding)</div>
+        <div class="feature-item"><span class="feature-dot"></span> Hyper-personalized 4-step cadence (Day 1, 3, 7, 14)</div>
+        <div class="feature-item"><span class="feature-dot"></span> 1-Click LinkedIn decision-maker finder & Gmail compose</div>
+      </div>
     </div>
   </div>
 
@@ -62,9 +136,9 @@
       tabSignup.classList.toggle("active", !isLogin);
       heading.textContent = isLogin ? "Welcome back" : "Create your account";
       subtitle.textContent = isLogin
-        ? "Log in to your Sellphi account."
-        : "Anyone can sign up. The very first person to sign up becomes an admin.";
-      submitButton.textContent = isLogin ? "Log in" : "Sign up";
+        ? "Log in to access your sales radar and pipelines."
+        : "Sign up to start detecting real-time buying signals.";
+      submitButton.textContent = isLogin ? "Log in" : "Create account";
       passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
     }
 
@@ -85,7 +159,7 @@
       const password = passwordInput.value;
 
       submitButton.disabled = true;
-      submitButton.innerHTML = `<span class="spinner"></span> ${mode === "login" ? "Logging in..." : "Signing up..."}`;
+      submitButton.innerHTML = `<span class="spinner"></span> ${mode === "login" ? "Logging in..." : "Creating account..."}`;
 
       try {
         let response;

@@ -8,4 +8,5 @@ build/
 dist/
 *.db
 sellphi.db
+cloudflared.exe
 
