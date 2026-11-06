@@ -1,7 +1,13 @@
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
+
+# Ensure base directory is in sys.path
+_base_dir = Path(__file__).resolve().parent.parent
+if str(_base_dir) not in sys.path:
+    sys.path.insert(0, str(_base_dir))
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
