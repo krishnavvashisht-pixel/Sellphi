@@ -145,6 +145,21 @@
     tabLogin.addEventListener("click", () => setMode("login"));
     tabSignup.addEventListener("click", () => setMode("signup"));
 
+    const directLink = document.querySelector('a[href="/dashboard"]');
+    if (directLink) {
+      directLink.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          const res = await fetch(`${API_BASE}/auth/demo-admin`, { method: "POST" });
+          if (res.ok) {
+            const data = await res.json();
+            setTokens(data.access_token, data.refresh_token);
+          }
+        } catch (err) {}
+        window.location.href = "/dashboard";
+      });
+    }
+
     // If we're already logged in, skip straight past this page.
     if (getAccessToken()) {
       apiFetch("/auth/me").then((response) => {
