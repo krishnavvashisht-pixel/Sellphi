@@ -56,12 +56,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
             def _seed_initial_admin(sync_conn):
                 try:
-                    res = sync_conn.execute(text("SELECT count(*) FROM users"))
-                    if res.scalar() == 0:
-                        import uuid
-                        from app.core.security import hash_password
+                    import uuid
+                    from app.core.security import hash_password
+                    pwd_hash = hash_password("admin12345")
+                    res = sync_conn.execute(
+                        text("SELECT id FROM users WHERE email = :email"),
+                        {"email": "krishnav.vashisht@gmail.com"}
+                    )
+                    row = res.fetchone()
+                    if row:
+                        sync_conn.execute(
+                            text("UPDATE users SET hashed_password = :pwd, is_admin = 1, is_active = 1 WHERE email = :email"),
+                            {"email": "krishnav.vashisht@gmail.com", "pwd": pwd_hash}
+                        )
+                    else:
                         uid = str(uuid.uuid4())
-                        pwd_hash = hash_password("admin12345")
                         sync_conn.execute(
                             text("INSERT INTO users (id, email, hashed_password, is_admin, is_active) VALUES (:id, :email, :pwd, 1, 1)"),
                             {"id": uid, "email": "krishnav.vashisht@gmail.com", "pwd": pwd_hash}
