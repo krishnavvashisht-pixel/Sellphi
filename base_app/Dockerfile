@@ -1,26 +1,32 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+# Set up non-root user with UID 1000 (Required for Hugging Face Spaces & container security)
+RUN useradd -m -u 1000 user
+
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PORT=7860 \
+    DATABASE_URL=sqlite+aiosqlite:////home/user/app/sellphi.db \
+    GEMINI_MODEL=gemini-3.1-flash-lite
+
+WORKDIR $HOME/app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Switch to non-root user
+USER user
+
+# Install Python packages into user environment
+COPY --chown=user:user requirements.txt $HOME/app/
+RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Copy application files
-COPY . .
-
-# Set default environment variables
-ENV HOST=0.0.0.0
-ENV PORT=7860
-ENV DATABASE_URL=sqlite+aiosqlite:///./sellphi.db
-ENV GEMINI_MODEL=gemini-3.1-flash-lite
+COPY --chown=user:user . $HOME/app/
 
 EXPOSE 7860
 
-# Run uvicorn server
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
