@@ -1,10 +1,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_v1_router
@@ -107,8 +108,11 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         return FileResponse(WEB_STATIC_DIR / "dashboard.html")
 
 
-    @app.get("/", response_model=RootResponse, tags=["system"])
-    async def root() -> RootResponse:
+    @app.get("/", tags=["system"])
+    async def root(request: Request) -> Any:
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept:
+            return RedirectResponse(url="/dashboard", status_code=307)
         return RootResponse(
             application=resolved_settings.app_name,
             version=resolved_settings.app_version,
