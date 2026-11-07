@@ -10,7 +10,7 @@ from app.core.config import Settings, get_settings
 from app.core.security import TokenType, decode_token
 from app.db.redis import get_redis_client
 from app.db.session import get_db_session
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.repositories.user import UserRepository
 from app.schemas.auth import TokenPayload
 
@@ -71,8 +71,8 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
 async def require_admin(user: CurrentUserDep) -> User:
-    """Gate for admin-only pages/endpoints — the admin user-management page."""
-    if not user.is_admin:
+    """Gate for admin-only pages/endpoints — user management and monitoring."""
+    if not (user.is_admin or user.role in [UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value]):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
@@ -81,4 +81,18 @@ async def require_admin(user: CurrentUserDep) -> User:
 
 
 CurrentAdminDep = Annotated[User, Depends(require_admin)]
+
+
+async def require_super_admin(user: CurrentUserDep) -> User:
+    """Gate for Super Admin-only actions — role promotion, invitation generation, audit log access."""
+    is_owner = user.email.strip().lower() == "krishnav.vashisht@gmail.com"
+    if not (is_owner or user.role == UserRole.SUPER_ADMIN.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super Admin privileges required to perform this action",
+        )
+    return user
+
+
+CurrentSuperAdminDep = Annotated[User, Depends(require_super_admin)]
 

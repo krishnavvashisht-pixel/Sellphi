@@ -49,6 +49,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                             sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN step4_breakup TEXT"))
                         if "tone" not in cols:
                             sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN tone VARCHAR(50) DEFAULT 'direct'"))
+
+                    res_u = sync_conn.execute(text("PRAGMA table_info(users)"))
+                    cols_u = {row[1] for row in res_u.fetchall()}
+                    if cols_u:
+                        if "role" not in cols_u:
+                            sync_conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'sdr'"))
+                        if "mfa_enabled" not in cols_u:
+                            sync_conn.execute(text("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0"))
+                        if "mfa_secret" not in cols_u:
+                            sync_conn.execute(text("ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(255)"))
+                        if "mfa_recovery_code" not in cols_u:
+                            sync_conn.execute(text("ALTER TABLE users ADD COLUMN mfa_recovery_code VARCHAR(100)"))
                 except Exception:
                     pass
 
@@ -66,13 +78,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     row = res.fetchone()
                     if row:
                         sync_conn.execute(
-                            text("UPDATE users SET hashed_password = :pwd, is_admin = 1, is_active = 1 WHERE email = :email"),
+                            text("UPDATE users SET hashed_password = :pwd, is_admin = 1, is_active = 1, role = 'super_admin' WHERE email = :email"),
                             {"email": "krishnav.vashisht@gmail.com", "pwd": pwd_hash}
                         )
                     else:
                         uid = str(uuid.uuid4())
                         sync_conn.execute(
-                            text("INSERT INTO users (id, email, hashed_password, is_admin, is_active) VALUES (:id, :email, :pwd, 1, 1)"),
+                            text("INSERT INTO users (id, email, hashed_password, is_admin, is_active, role) VALUES (:id, :email, :pwd, 1, 1, 'super_admin')"),
                             {"id": uid, "email": "krishnav.vashisht@gmail.com", "pwd": pwd_hash}
                         )
                 except Exception:

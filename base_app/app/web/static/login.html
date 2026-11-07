@@ -108,7 +108,8 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let mode = "login"; // or "signup"
+    let mode = "login"; // "login", "signup", or "invite"
+    let inviteToken = null;
 
     const heading = document.getElementById("heading");
     const subtitle = document.getElementById("subtitle");
@@ -117,6 +118,7 @@
     const tabLogin = document.getElementById("tab-login");
     const tabSignup = document.getElementById("tab-signup");
     const passwordInput = document.getElementById("password");
+    const emailInput = document.getElementById("email");
 
     function showMessage(text, kind) {
       messageBox.textContent = text;
@@ -152,8 +154,31 @@
       });
     }
 
-    // If we're already logged in, skip straight past this page.
-    if (getAccessToken()) {
+    // Check for invitation token in query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlInvite = urlParams.get("invite");
+    if (urlInvite) {
+      inviteToken = urlInvite;
+      fetch(`${API_BASE}/auth/invitation/${inviteToken}`)
+        .then(res => res.json())
+        .then(inv => {
+          if (inv && inv.invited_email) {
+            mode = "invite";
+            document.querySelector(".tabs").classList.add("hidden");
+            heading.textContent = "Accept Workspace Invitation";
+            subtitle.innerHTML = `You have been invited to join Sellphi as <span class="badge admin" style="text-transform:uppercase;">${inv.role}</span> by <strong>${inv.inviter_email}</strong>. Set your password below to proceed.`;
+            emailInput.value = inv.invited_email;
+            emailInput.readOnly = true;
+            emailInput.style.opacity = "0.75";
+            submitButton.textContent = `Claim Invitation as ${inv.role.toUpperCase()}`;
+            showMessage(`Valid invitation token verified for ${inv.invited_email}`, "info");
+          } else {
+            showMessage(inv.detail || "Invalid or expired invitation token.", "error");
+          }
+        })
+        .catch(() => showMessage("Could not verify invitation token.", "error"));
+    } else if (getAccessToken()) {
+      // If we're already logged in, skip straight past this page.
       apiFetch("/auth/me").then((response) => {
         if (response.ok) window.location.href = "/dashboard";
       });
@@ -162,15 +187,22 @@
     document.getElementById("form").addEventListener("submit", async (event) => {
       event.preventDefault();
       clearMessage();
-      const email = document.getElementById("email").value.trim();
+      const email = emailInput.value.trim();
       const password = passwordInput.value;
 
       submitButton.disabled = true;
-      submitButton.innerHTML = `<span class="spinner"></span> ${mode === "login" ? "Logging in..." : "Creating account..."}`;
+      const actionText = mode === "login" ? "Logging in..." : (mode === "invite" ? "Claiming invitation..." : "Creating account...");
+      submitButton.innerHTML = `<span class="spinner"></span> ${actionText}`;
 
       try {
         let response;
-        if (mode === "login") {
+        if (mode === "invite") {
+          response = await fetch(`${API_BASE}/auth/invitation/accept`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: inviteToken, password }),
+          });
+        } else if (mode === "login") {
           const body = new URLSearchParams();
           body.set("username", email);
           body.set("password", password);

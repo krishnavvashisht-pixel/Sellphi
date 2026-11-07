@@ -3,8 +3,149 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sellphi — Admin Console</title>
+  <title>Sellphi — Enterprise RBAC & Admin Console</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--border);
+    }
+    .kpi-card.accent::before {
+      background: var(--accent-gradient);
+    }
+    .kpi-card.owner::before {
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+    }
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kpi-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-heading);
+      letter-spacing: -0.02em;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .role-select {
+      background: rgba(13, 17, 24, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 0;
+      width: auto;
+      min-width: 130px;
+    }
+    .role-select:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .role-pill-super {
+      background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25));
+      border: 1px solid rgba(168,85,247,0.45);
+      color: #d8b4fe;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .role-pill-admin {
+      background: rgba(99,102,241,0.18);
+      border: 1px solid rgba(99,102,241,0.4);
+      color: #a5b4fc;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .role-pill-sdr {
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.35);
+      color: #6ee7b7;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .role-pill-viewer {
+      background: rgba(148,163,184,0.15);
+      border: 1px solid rgba(148,163,184,0.3);
+      color: #cbd5e1;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .code-box {
+      background: #090c12;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: #a5b4fc;
+      word-break: break-all;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .invite-panel {
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+  </style>
 </head>
 <body class="admin-body">
   <div class="topbar">
@@ -12,12 +153,15 @@
       <a href="/dashboard" class="brand-badge">
         <div class="brand-logo-icon">⚡</div>
         <span>Sellphi</span>
-        <span class="brand-tag-pill">ADMIN</span>
+        <span class="brand-tag-pill" style="background:var(--accent-gradient);">RBAC CONSOLE</span>
       </a>
-      <a href="/dashboard" class="nav-link">Radar & Products</a>
+      <a href="/dashboard" class="nav-link">Radar & Outbound</a>
       <a href="/admin" class="nav-link active">Admin Console</a>
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
+      <button class="secondary" id="btn-mfa-modal" type="button" style="width:auto; padding:7px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+        <span>🛡️ Security & MFA</span>
+      </button>
       <div class="user-pill">
         <span class="user-status-dot"></span>
         <span id="who">Checking admin...</span>
@@ -26,45 +170,243 @@
     </div>
   </div>
 
-  <div class="content" style="max-width:960px; margin:40px auto; padding:0 24px;">
-    <div style="margin-bottom:28px;">
-      <h1 style="font-size:22px; margin-bottom:6px;">Workspace User Management</h1>
-      <p class="subtitle" style="margin:0;">Control system access, promote administrators, and manage active team members.</p>
+  <div class="content" style="max-width:1100px; margin:36px auto; padding:0 24px;">
+    <!-- Page Header -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:28px;">
+      <div>
+        <h1 style="font-size:24px; margin-bottom:6px; display:flex; align-items:center; gap:10px;">
+          <span>Enterprise Access Control</span>
+          <span class="role-pill-super">RBAC ENFORCED</span>
+        </h1>
+        <p class="subtitle" style="margin:0;">Manage roles, provision privileged admin invitations, monitor audit trails, and enforce security policies.</p>
+      </div>
+      <div id="super-admin-badge" class="hidden">
+        <span class="badge" style="background:rgba(99,102,241,0.18); border:1px solid rgba(99,102,241,0.45); color:#c7d2fe; padding:8px 14px; font-size:13px;">
+          👑 Super Admin Mode Active
+        </span>
+      </div>
     </div>
 
+    <!-- Alert / Toast Messages -->
     <div id="message" class="message"></div>
 
-    <div id="denied" class="denied hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:40px; margin-top:30px; text-align:center;">
-      <div style="font-size:36px; margin-bottom:12px;">🔒</div>
-      <h1 style="font-size:20px; margin-bottom:8px;">Access Denied</h1>
-      <p class="subtitle" style="margin-bottom:20px;">This console is restricted to administrators. Only verified workspace admins can manage team members.</p>
-      <a href="/login" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:var(--accent); color:#fff; border-radius:10px; text-decoration:none; font-weight:600; font-size:14px;">Log in as Administrator &rarr;</a>
+    <!-- Access Denied State (For Non-Admins) -->
+    <div id="denied" class="denied hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:48px 32px; margin-top:20px; text-align:center;">
+      <div style="font-size:48px; margin-bottom:14px;">🔒</div>
+      <h1 style="font-size:22px; margin-bottom:8px;">Access Denied — Privileged Console</h1>
+      <p class="subtitle" style="max-width:540px; margin:0 auto 24px;">This console requires verified Administrator or Super Administrator role. Backend endpoints independently reject unauthorized access with HTTP 403 Forbidden.</p>
+      <div style="display:flex; gap:12px; justify-content:center;">
+        <a href="/login" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:var(--accent-gradient); color:#fff; border-radius:10px; text-decoration:none; font-weight:600; font-size:14px;">Log in as Administrator &rarr;</a>
+        <a href="/dashboard" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:#cbd5e1; border-radius:10px; text-decoration:none; font-weight:600; font-size:14px;">Return to Radar</a>
+      </div>
     </div>
 
-    <div style="overflow-x:auto;">
-      <table id="users-table" class="hidden">
-        <thead>
-          <tr>
-            <th>User Account</th>
-            <th>Status</th>
-            <th>Role</th>
-            <th>Registered</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="users-body"></tbody>
-      </table>
+    <!-- Authenticated Admin Content Area -->
+    <div id="admin-view" class="hidden">
+      <!-- KPI Metric Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card accent">
+          <div class="kpi-label">
+            <span>Total Accounts</span>
+            <span>👥</span>
+          </div>
+          <div class="kpi-val" id="kpi-total">0</div>
+          <div class="kpi-sub">Active workspace members</div>
+        </div>
+
+        <div class="kpi-card owner">
+          <div class="kpi-label">
+            <span>Super Admins</span>
+            <span>👑</span>
+          </div>
+          <div class="kpi-val" id="kpi-super">0</div>
+          <div class="kpi-sub">Full role management authority</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">
+            <span>Standard Admins</span>
+            <span>🛡️</span>
+          </div>
+          <div class="kpi-val" id="kpi-admins">0</div>
+          <div class="kpi-sub">Team & pipeline managers</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">
+            <span>Sales SDRs & Viewers</span>
+            <span>⚡</span>
+          </div>
+          <div class="kpi-val" id="kpi-sdrs">0</div>
+          <div class="kpi-sub">Buying signals & cadences</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs" style="margin-bottom:24px;">
+        <button id="tab-users" class="active" type="button">👥 Users & Permissions</button>
+        <button id="tab-invites" type="button">✉️ Admin Invitations</button>
+        <button id="tab-audits" type="button">📜 Security Audit Trail</button>
+      </div>
+
+      <!-- TAB 1: USERS & PERMISSIONS -->
+      <div id="section-users">
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 12px 32px -8px rgba(0,0,0,0.5);">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="font-weight:700; font-size:15px; color:var(--text-heading);">Workspace User Directory</div>
+            <div style="font-size:13px; color:var(--muted);">
+              <span id="role-notice">Super Admins can modify any member's role. Changes are audited.</span>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="margin:0; border:none; background:transparent;">
+              <thead>
+                <tr>
+                  <th>User Account</th>
+                  <th>Status</th>
+                  <th>Assigned Role</th>
+                  <th>MFA State</th>
+                  <th>Registered</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-body">
+                <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);"><span class="spinner spinner-accent"></span> Loading user records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: ADMIN INVITATIONS -->
+      <div id="section-invites" class="hidden">
+        <!-- Create Invitation Panel -->
+        <div class="invite-panel">
+          <h2 style="margin-top:0; margin-bottom:6px; font-size:17px; display:flex; align-items:center; gap:8px;">
+            <span>✉️ Provision Privileged Invitation</span>
+          </h2>
+          <p class="subtitle" style="margin-bottom:18px;">Generate a secure, single-use invite link with pre-assigned permissions. Only Super Admins can issue invitations.</p>
+
+          <form id="invite-form" style="display:grid; grid-template-columns: 2fr 1fr auto; gap:14px; align-items:flex-end;">
+            <div>
+              <label for="invite-email" style="font-size:12px;">Recipient Email</label>
+              <input id="invite-email" type="email" placeholder="colleague@company.com" required style="margin-bottom:0;" />
+            </div>
+
+            <div>
+              <label for="invite-role" style="font-size:12px;">Assigned Role</label>
+              <select id="invite-role" style="margin-bottom:0;">
+                <option value="admin">🛡️ Admin</option>
+                <option value="super_admin">👑 Super Admin</option>
+                <option value="sdr" selected>⚡ Sales SDR</option>
+                <option value="viewer">👁️ Viewer</option>
+              </select>
+            </div>
+
+            <button id="invite-submit" type="submit" style="width:auto; height:44px; white-space:nowrap; padding:0 24px;">
+              Generate Link &rarr;
+            </button>
+          </form>
+
+          <!-- Generated Link Alert Box -->
+          <div id="generated-link-box" class="hidden" style="margin-top:20px; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.35); border-radius:12px; padding:16px;">
+            <div style="font-size:13px; font-weight:700; color:#c7d2fe; margin-bottom:8px;">✅ Invitation Link Ready (Valid for 7 days)</div>
+            <div class="code-box">
+              <span id="generated-link-text"></span>
+              <button class="secondary" id="btn-copy-invite" type="button" style="width:auto; padding:6px 14px; font-size:12px; margin:0;">
+                📋 Copy Link
+              </button>
+            </div>
+            <div style="font-size:12px; color:var(--muted); margin-top:8px;">Share this private URL with the invited colleague to complete their registration.</div>
+          </div>
+        </div>
+
+        <!-- Invitations List Table -->
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--border); font-weight:700; font-size:15px;">
+            Active & Historical Invitations
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="margin:0; border:none; background:transparent;">
+              <thead>
+                <tr>
+                  <th>Invited Email</th>
+                  <th>Granted Role</th>
+                  <th>Invited By</th>
+                  <th>Created</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="invitations-body">
+                <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">Loading invitations...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: SECURITY AUDIT TRAIL -->
+      <div id="section-audits" class="hidden">
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; font-size:15px; color:var(--text-heading);">Immutable Security Audit Trail</div>
+              <div style="font-size:12.5px; color:var(--muted); margin-top:2px;">Verifiable log of all role mutations, status toggles, and security actions.</div>
+            </div>
+            <button class="secondary" id="btn-refresh-audits" type="button" style="width:auto; padding:7px 14px; font-size:12.5px;">
+              🔄 Refresh Trail
+            </button>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table style="margin:0; border:none; background:transparent;">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target Account</th>
+                  <th>Transition</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="audits-body">
+                <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">Loading audit logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MFA Modal -->
+  <div id="mfa-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="margin:0; font-size:18px;">🛡️ Two-Factor Authentication (MFA)</h2>
+        <button class="tag-btn" onclick="closeMfaModal()" style="font-size:16px; padding:4px 10px;">✕</button>
+      </div>
+      <p class="subtitle" style="font-size:13px; margin-bottom:18px;">Add an extra layer of defense to your privileged administrator account.</p>
+
+      <div id="mfa-modal-content">
+        <div style="text-align:center; padding:20px;"><span class="spinner spinner-accent"></span> Initializing MFA key...</div>
+      </div>
     </div>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
     let me = null;
+    let isSuperAdmin = false;
 
     function showMessage(text, kind) {
       const box = document.getElementById("message");
       box.textContent = text;
       box.className = `message ${kind}`;
+      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     function clearMessage() {
@@ -73,58 +415,126 @@
       box.textContent = "";
     }
 
+    // Role Pill Formatter
+    function getRoleBadge(role) {
+      switch (role) {
+        case "super_admin":
+          return `<span class="role-pill-super">👑 Super Admin</span>`;
+        case "admin":
+          return `<span class="role-pill-admin">🛡️ Admin</span>`;
+        case "viewer":
+          return `<span class="role-pill-viewer">👁️ Viewer</span>`;
+        case "sdr":
+        default:
+          return `<span class="role-pill-sdr">⚡ Sales SDR</span>`;
+      }
+    }
+
+    // Tab Navigation Switcher
+    const tabUsers = document.getElementById("tab-users");
+    const tabInvites = document.getElementById("tab-invites");
+    const tabAudits = document.getElementById("tab-audits");
+
+    const secUsers = document.getElementById("section-users");
+    const secInvites = document.getElementById("section-invites");
+    const secAudits = document.getElementById("section-audits");
+
+    function setTab(tab) {
+      tabUsers.classList.toggle("active", tab === "users");
+      tabInvites.classList.toggle("active", tab === "invites");
+      tabAudits.classList.toggle("active", tab === "audits");
+
+      secUsers.classList.toggle("hidden", tab !== "users");
+      secInvites.classList.toggle("hidden", tab !== "invites");
+      secAudits.classList.toggle("hidden", tab !== "audits");
+
+      if (tab === "users") loadUsers();
+      if (tab === "invites") loadInvitations();
+      if (tab === "audits") loadAuditLogs();
+    }
+
+    tabUsers.addEventListener("click", () => setTab("users"));
+    tabInvites.addEventListener("click", () => setTab("invites"));
+    tabAudits.addEventListener("click", () => setTab("audits"));
+
+    // Render Users Table
     function renderUsers(users) {
       const body = document.getElementById("users-body");
       body.innerHTML = "";
 
-      for (const user of users) {
+      let countSuper = 0;
+      let countAdmin = 0;
+      let countSdr = 0;
+
+      for (const u of users) {
+        const role = u.role || (u.is_admin ? "admin" : "sdr");
+        if (role === "super_admin") countSuper++;
+        else if (role === "admin") countAdmin++;
+        else countSdr++;
+
+        const isOwner = u.email.toLowerCase() === "krishnav.vashisht@gmail.com";
+        const isSelf = u.id === me.id;
+
         const row = document.createElement("tr");
 
-        const statusBadge = user.is_active
+        const statusBadge = u.is_active
           ? '<span class="badge active"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span> Active</span>'
           : '<span class="badge inactive">Inactive</span>';
 
-        const isSelf = user.id === me.id;
-        const isOwner = user.email.toLowerCase() === "krishnav.vashisht@gmail.com";
-        const toggleActiveLabel = user.is_active ? "Deactivate" : "Activate";
-        const toggleAdminLabel = user.is_admin ? "Remove admin" : "Make admin";
+        const mfaBadge = u.mfa_enabled
+          ? '<span class="badge active" style="font-size:11px;">🛡️ Enabled</span>'
+          : '<span style="color:var(--muted); font-size:12px;">Disabled</span>';
 
-        const roleBadge = isOwner
-          ? '<span class="badge" style="background:linear-gradient(135deg, #6366f1, #a855f7); color:#fff; font-weight:700;">Super Admin</span>'
-          : (user.is_admin
-              ? '<span class="badge admin">Admin</span>'
-              : '<span style="color:var(--muted); font-size:13px;">Member</span>');
+        // Role Dropdown: Only editable by Super Admin, and cannot edit the owner
+        const canEditRole = isSuperAdmin && !isOwner;
+        const roleSelectHtml = `
+          <select class="role-select" data-id="${u.id}" ${canEditRole ? "" : "disabled"}>
+            <option value="super_admin" ${role === "super_admin" ? "selected" : ""}>👑 Super Admin</option>
+            <option value="admin" ${role === "admin" ? "selected" : ""}>🛡️ Admin</option>
+            <option value="sdr" ${role === "sdr" ? "selected" : ""}>⚡ Sales SDR</option>
+            <option value="viewer" ${role === "viewer" ? "selected" : ""}>👁️ Viewer</option>
+          </select>
+        `;
 
         let actionsHtml = "";
         if (isOwner) {
-          actionsHtml = `<span class="badge" style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.35); color:#a5b4fc; font-weight:600; padding:6px 12px;">👑 Owner (Protected)</span>`;
+          actionsHtml = `<span class="badge" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#fcd34d; font-weight:700;">👑 Protected Owner</span>`;
         } else if (isSelf) {
           actionsHtml = `<span style="color:var(--muted); font-size:12.5px; font-style:italic;">Your account (Protected)</span>`;
         } else {
+          const toggleActiveLabel = u.is_active ? "Deactivate" : "Activate";
           actionsHtml = `
-            <button class="secondary" data-action="toggle-active" data-id="${user.id}" data-value="${!user.is_active}" style="background:rgba(255,255,255,0.04);">${toggleActiveLabel}</button>
-            <button class="secondary" data-action="toggle-admin" data-id="${user.id}" data-value="${!user.is_admin}" style="background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3); color:#a5b4fc;">${toggleAdminLabel}</button>
+            <button class="secondary" data-action="toggle-active" data-id="${u.id}" data-value="${!u.is_active}" style="background:rgba(255,255,255,0.04); font-size:12px; padding:6px 12px; width:auto;">
+              ${toggleActiveLabel}
+            </button>
           `;
         }
 
         row.innerHTML = `
           <td>
-            <div style="font-weight:600; color:var(--text-heading);">${user.email} ${isSelf ? '<span class="badge" style="background:rgba(255,255,255,0.06); color:#cbd5e1; font-size:10px; margin-left:4px;">YOU</span>' : ''}</div>
+            <div style="font-weight:600; color:var(--text-heading); display:flex; align-items:center; gap:6px;">
+              <span>${u.email}</span>
+              ${isSelf ? '<span class="badge" style="background:rgba(255,255,255,0.06); color:#cbd5e1; font-size:10px;">YOU</span>' : ''}
+              ${isOwner ? '<span class="badge" style="background:rgba(99,102,241,0.18); color:#a5b4fc; font-size:10px;">OWNER</span>' : ''}
+            </div>
           </td>
           <td>${statusBadge}</td>
-          <td>${roleBadge}</td>
-          <td style="color:var(--muted); font-size:13px;">${new Date(user.created_at).toLocaleDateString()}</td>
+          <td>${roleSelectHtml}</td>
+          <td>${mfaBadge}</td>
+          <td style="color:var(--muted); font-size:12.5px;">${new Date(u.created_at).toLocaleDateString()}</td>
           <td class="row-actions">${actionsHtml}</td>
         `;
         body.appendChild(row);
       }
+
+      // Update KPIs
+      document.getElementById("kpi-total").textContent = users.length;
+      document.getElementById("kpi-super").textContent = countSuper;
+      document.getElementById("kpi-admins").textContent = countAdmin;
+      document.getElementById("kpi-sdrs").textContent = countSdr;
     }
 
     async function loadUsers() {
-      const body = document.getElementById("users-body");
-      if (body) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--muted);"><span class="spinner spinner-accent"></span> Loading user accounts...</td></tr>';
-      }
       const response = await apiFetch("/admin/users");
       if (!response.ok) {
         const problem = await response.json().catch(() => ({}));
@@ -134,53 +544,358 @@
       renderUsers(await response.json());
     }
 
-    document.getElementById("users-body").addEventListener("click", async (event) => {
-      const button = event.target.closest("button[data-action]");
-      if (!button) return;
+    // Role Selection Change Listener
+    document.getElementById("users-body").addEventListener("change", async (event) => {
+      const select = event.target.closest("select.role-select");
+      if (!select) return;
 
-      const userId = button.dataset.id;
-      const value = button.dataset.value === "true";
-      const payload = button.dataset.action === "toggle-active"
-        ? { is_active: value }
-        : { is_admin: value };
+      const userId = select.dataset.id;
+      const newRole = select.value;
 
       clearMessage();
       const response = await apiFetch(`/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ role: newRole }),
       });
 
       if (!response.ok) {
         const problem = await response.json().catch(() => ({}));
-        showMessage(problem.detail || "That change was refused.", "error");
+        showMessage(problem.detail || "Failed to update role.", "error");
+        await loadUsers();
         return;
       }
 
+      showMessage(`Role updated successfully to ${newRole.toUpperCase()}.`, "success");
       await loadUsers();
     });
 
+    // Active Toggle Listener
+    document.getElementById("users-body").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action='toggle-active']");
+      if (!button) return;
+
+      const userId = button.dataset.id;
+      const value = button.dataset.value === "true";
+
+      clearMessage();
+      const response = await apiFetch(`/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: value }),
+      });
+
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        showMessage(problem.detail || "Status update refused.", "error");
+        return;
+      }
+
+      showMessage("User active status updated.", "success");
+      await loadUsers();
+    });
+
+    // TAB 2: INVITATIONS
+    async function loadInvitations() {
+      const body = document.getElementById("invitations-body");
+      const response = await apiFetch("/admin/invitations");
+      if (!response.ok) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--danger);">Failed to load invitations.</td></tr>';
+        return;
+      }
+
+      const invites = await response.json();
+      if (invites.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">No invitations generated yet. Create one above.</td></tr>';
+        return;
+      }
+
+      body.innerHTML = "";
+      for (const inv of invites) {
+        const row = document.createElement("tr");
+
+        let statusHtml = "";
+        const isExpired = new Date(inv.expires_at) < new Date();
+        if (inv.is_revoked) {
+          statusHtml = `<span class="badge inactive">Revoked</span>`;
+        } else if (inv.accepted_at) {
+          statusHtml = `<span class="badge active">Accepted</span>`;
+        } else if (isExpired) {
+          statusHtml = `<span style="color:var(--muted); font-size:12px;">Expired</span>`;
+        } else {
+          statusHtml = `<span class="badge" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#fcd34d;">Pending</span>`;
+        }
+
+        let actionHtml = "";
+        if (!inv.is_revoked && !inv.accepted_at && !isExpired && isSuperAdmin) {
+          actionHtml = `<button class="secondary" data-action="revoke-invite" data-id="${inv.id}" style="color:#fb7185; border-color:rgba(244,63,94,0.3); font-size:12px; padding:5px 10px; width:auto;">Revoke</button>`;
+        }
+
+        row.innerHTML = `
+          <td style="font-weight:600; color:var(--text);">${inv.invited_email}</td>
+          <td>${getRoleBadge(inv.role)}</td>
+          <td style="color:var(--muted); font-size:12.5px;">${inv.inviter_email}</td>
+          <td style="color:var(--muted); font-size:12.5px;">${new Date(inv.created_at).toLocaleDateString()}</td>
+          <td>${statusHtml}</td>
+          <td class="row-actions">${actionHtml}</td>
+        `;
+        body.appendChild(row);
+      }
+    }
+
+    // Create Invitation Form
+    document.getElementById("invite-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessage();
+
+      const email = document.getElementById("invite-email").value.trim();
+      const role = document.getElementById("invite-role").value;
+      const submitBtn = document.getElementById("invite-submit");
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Generating...";
+
+      try {
+        const response = await apiFetch("/admin/invitations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invited_email: email, role }),
+        });
+
+        if (!response.ok) {
+          const problem = await response.json().catch(() => ({}));
+          showMessage(problem.detail || "Could not create invitation.", "error");
+          return;
+        }
+
+        const inv = await response.json();
+        const inviteUrl = `${window.location.origin}/login?invite=${inv.token}`;
+
+        document.getElementById("generated-link-text").textContent = inviteUrl;
+        document.getElementById("generated-link-box").classList.remove("hidden");
+        document.getElementById("invite-email").value = "";
+
+        showMessage(`Invitation generated for ${email} with role ${role.toUpperCase()}!`, "success");
+        await loadInvitations();
+      } catch (err) {
+        showMessage("Failed to generate invitation link.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Generate Link →";
+      }
+    });
+
+    // Copy Invite Link Button
+    document.getElementById("btn-copy-invite").addEventListener("click", () => {
+      const link = document.getElementById("generated-link-text").textContent;
+      navigator.clipboard.writeText(link).then(() => {
+        const btn = document.getElementById("btn-copy-invite");
+        btn.textContent = "✅ Copied!";
+        setTimeout(() => { btn.textContent = "📋 Copy Link"; }, 2500);
+      });
+    });
+
+    // Revoke Invite Listener
+    document.getElementById("invitations-body").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action='revoke-invite']");
+      if (!btn) return;
+
+      const inviteId = btn.dataset.id;
+      clearMessage();
+
+      const response = await apiFetch(`/admin/invitations/${inviteId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        showMessage(problem.detail || "Could not revoke invitation.", "error");
+        return;
+      }
+
+      showMessage("Invitation revoked successfully.", "success");
+      await loadInvitations();
+    });
+
+    // TAB 3: AUDIT LOGS
+    async function loadAuditLogs() {
+      const body = document.getElementById("audits-body");
+      const response = await apiFetch("/admin/audits");
+      if (!response.ok) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--danger);">Failed to load audit logs.</td></tr>';
+        return;
+      }
+
+      const logs = await response.json();
+      if (logs.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">No security events recorded yet.</td></tr>';
+        return;
+      }
+
+      body.innerHTML = "";
+      for (const log of logs) {
+        const row = document.createElement("tr");
+
+        let actionBadge = `<span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc;">${log.action}</span>`;
+        if (log.action.includes("role")) {
+          actionBadge = `<span class="badge" style="background:rgba(168,85,247,0.2); color:#d8b4fe;">👑 ${log.action}</span>`;
+        } else if (log.action.includes("mfa")) {
+          actionBadge = `<span class="badge active">🛡️ ${log.action}</span>`;
+        } else if (log.action.includes("revoke")) {
+          actionBadge = `<span class="badge inactive">🚫 ${log.action}</span>`;
+        }
+
+        const transition = (log.old_value || log.new_value)
+          ? `<span style="font-family:monospace; font-size:12px;">${log.old_value || "—"} &rarr; <strong>${log.new_value || "—"}</strong></span>`
+          : '<span style="color:var(--muted);">—</span>';
+
+        row.innerHTML = `
+          <td style="color:var(--muted); font-size:12px; white-space:nowrap;">${new Date(log.created_at).toLocaleString()}</td>
+          <td style="font-weight:600; color:var(--text);">${log.actor_email}</td>
+          <td>${actionBadge}</td>
+          <td style="color:#cbd5e1; font-size:13px;">${log.target_email || "—"}</td>
+          <td>${transition}</td>
+          <td style="color:var(--muted); font-size:12.5px;">${log.details || ""}</td>
+        `;
+        body.appendChild(row);
+      }
+    }
+
+    document.getElementById("btn-refresh-audits").addEventListener("click", () => {
+      loadAuditLogs();
+    });
+
+    // MFA MODAL LOGIC
+    const mfaModal = document.getElementById("mfa-modal");
+    const mfaContent = document.getElementById("mfa-modal-content");
+
+    function closeMfaModal() {
+      mfaModal.classList.add("hidden");
+    }
+
+    document.getElementById("btn-mfa-modal").addEventListener("click", async () => {
+      mfaModal.classList.remove("hidden");
+      mfaContent.innerHTML = '<div style="text-align:center; padding:20px;"><span class="spinner spinner-accent"></span> Checking MFA status...</div>';
+
+      if (me.mfa_enabled) {
+        mfaContent.innerHTML = `
+          <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:18px; margin-bottom:20px; text-align:center;">
+            <div style="font-size:24px; margin-bottom:6px;">🛡️</div>
+            <div style="font-weight:700; color:#34d399; margin-bottom:4px;">Two-Factor Authentication is Active</div>
+            <div style="font-size:12.5px; color:var(--muted);">Your privileged account is protected with 2FA verification.</div>
+          </div>
+          <button class="secondary" id="btn-disable-mfa" style="color:#fb7185; border-color:rgba(244,63,94,0.3);">
+            Disable Two-Factor Authentication
+          </button>
+        `;
+
+        document.getElementById("btn-disable-mfa").addEventListener("click", async () => {
+          const res = await apiFetch("/auth/mfa/disable", { method: "POST" });
+          if (res.ok) {
+            me.mfa_enabled = false;
+            closeMfaModal();
+            showMessage("MFA has been disabled.", "info");
+            await loadUsers();
+          }
+        });
+      } else {
+        // Setup MFA
+        const res = await apiFetch("/auth/mfa/setup", { method: "POST" });
+        if (!res.ok) {
+          mfaContent.innerHTML = '<div style="color:var(--danger); padding:16px;">Failed to initialize MFA keys.</div>';
+          return;
+        }
+
+        const data = await res.json();
+        mfaContent.innerHTML = `
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;">Authenticator Secret Key</label>
+            <div class="code-box">
+              <span>${data.secret}</span>
+              <button class="tag-btn" id="btn-copy-mfa" style="margin:0;">Copy</button>
+            </div>
+            <div style="font-size:11.5px; color:var(--muted); margin-top:6px;">Backup Code: <code>${data.backup_code}</code></div>
+          </div>
+
+          <form id="mfa-verify-form">
+            <label for="mfa-code" style="font-size:12px;">Enter 6-digit confirmation code</label>
+            <input id="mfa-code" type="text" placeholder="123456" maxlength="8" required style="letter-spacing:0.2em; font-size:18px; text-align:center;" />
+            <button type="submit" style="margin-top:8px;">Verify & Enable 2FA</button>
+          </form>
+        `;
+
+        document.getElementById("btn-copy-mfa").addEventListener("click", () => {
+          navigator.clipboard.writeText(data.secret);
+          document.getElementById("btn-copy-mfa").textContent = "Copied!";
+        });
+
+        document.getElementById("mfa-verify-form").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const code = document.getElementById("mfa-code").value.trim();
+          const verifyRes = await apiFetch("/auth/mfa/enable", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code }),
+          });
+
+          if (!verifyRes.ok) {
+            alert("Invalid verification code. Please try again.");
+            return;
+          }
+
+          me.mfa_enabled = true;
+          closeMfaModal();
+          showMessage("Two-Factor Authentication is now enabled for your account!", "success");
+          await loadUsers();
+        });
+      }
+    });
+
+    // Logout
     document.getElementById("logout").addEventListener("click", () => {
       clearTokens();
       goToLogin();
     });
 
+    // Bootstrapping
     (async () => {
       try {
         me = await requireLogin();
       } catch (err) {}
-      if (!me || !me.is_admin) {
+
+      if (!me) {
         document.getElementById("denied").classList.remove("hidden");
-        document.getElementById("users-table").classList.add("hidden");
-        const whoEl = document.getElementById("who");
-        if (whoEl) whoEl.textContent = me ? `${me.email} · guest` : "Restricted";
+        document.getElementById("admin-view").classList.add("hidden");
+        document.getElementById("who").textContent = "Restricted";
         return;
       }
 
-      const whoEl = document.getElementById("who");
-      if (whoEl) whoEl.textContent = `${me.email} · admin`;
+      isSuperAdmin = me.email.toLowerCase() === "krishnav.vashisht@gmail.com" || me.role === "super_admin";
+      const isAdmin = isSuperAdmin || me.is_admin || me.role === "admin";
 
-      document.getElementById("users-table").classList.remove("hidden");
+      if (!isAdmin) {
+        document.getElementById("denied").classList.remove("hidden");
+        document.getElementById("admin-view").classList.add("hidden");
+        document.getElementById("who").textContent = `${me.email} · non-admin`;
+        return;
+      }
+
+      // User is verified Admin
+      const whoEl = document.getElementById("who");
+      whoEl.textContent = `${me.email} · ${isSuperAdmin ? "Super Admin" : "Admin"}`;
+
+      if (isSuperAdmin) {
+        document.getElementById("super-admin-badge").classList.remove("hidden");
+        document.getElementById("invite-submit").disabled = false;
+      } else {
+        document.getElementById("role-notice").textContent = "Only Super Admins can alter roles or issue invitations.";
+        document.getElementById("invite-submit").disabled = true;
+        document.getElementById("invite-submit").title = "Super Admin privileges required.";
+      }
+
+      document.getElementById("denied").classList.add("hidden");
+      document.getElementById("admin-view").classList.remove("hidden");
+
       await loadUsers();
     })();
   </script>

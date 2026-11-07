@@ -2,15 +2,25 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from app.api.dependencies import get_current_user, require_admin
+from app.api.dependencies import get_current_user, require_admin, require_super_admin
 from app.api.v1.auth.routes import get_auth_service
 from app.main import app
-from app.models.user import User
+from app.models.user import User, UserRole
 from httpx import AsyncClient
 
 
-def make_user(email: str = "someone@sellphi.dev", is_admin: bool = False) -> User:
-    user = User(email=email, hashed_password="irrelevant", is_active=True, is_admin=is_admin)
+def make_user(
+    email: str = "someone@sellphi.dev",
+    is_admin: bool = False,
+    role: str = "sdr",
+) -> User:
+    user = User(
+        email=email,
+        hashed_password="irrelevant",
+        is_active=True,
+        is_admin=is_admin,
+        role=role,
+    )
     user.id = uuid4()
     user.created_at = datetime.now(UTC)
     user.updated_at = datetime.now(UTC)
@@ -25,19 +35,29 @@ class FakeAuthService:
     async def list_users(self) -> list[User]:
         return self.users
 
-    async def update_user(self, user_id, is_active, is_admin) -> User:  # noqa: ANN001
+    async def update_user(
+        self,
+        user_id,
+        is_active=None,
+        is_admin=None,
+        role=None,
+        **kwargs,
+    ) -> User:  # noqa: ANN001
         user = next(u for u in self.users if u.id == user_id)
         if is_active is not None:
             user.is_active = is_active
         if is_admin is not None:
             user.is_admin = is_admin
+        if role is not None:
+            user.role = role
+            user.is_admin = role in [UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value]
         return user
 
 
 @pytest.mark.asyncio
 async def test_admin_can_list_users(client: AsyncClient) -> None:
-    admin = make_user("admin@sellphi.dev", is_admin=True)
-    regular = make_user("regular@sellphi.dev")
+    admin = make_user("admin@sellphi.dev", is_admin=True, role="admin")
+    regular = make_user("regular@sellphi.dev", role="sdr")
     app.dependency_overrides[require_admin] = lambda: admin
     app.dependency_overrides[get_auth_service] = lambda: FakeAuthService([admin, regular])
 
@@ -62,7 +82,7 @@ async def test_a_logged_in_non_admin_is_forbidden_from_listing_users(client: Asy
     # Override get_current_user (not require_admin) so the real require_admin
     # dependency actually runs and does the rejecting — this is the check
     # that matters: a real, logged-in, non-admin account must be refused.
-    regular = make_user("regular@sellphi.dev", is_admin=False)
+    regular = make_user("regular@sellphi.dev", is_admin=False, role="sdr")
     app.dependency_overrides[get_current_user] = lambda: regular
 
     response = await client.get("/api/v1/admin/users")
@@ -72,8 +92,8 @@ async def test_a_logged_in_non_admin_is_forbidden_from_listing_users(client: Asy
 
 @pytest.mark.asyncio
 async def test_admin_can_deactivate_a_user(client: AsyncClient) -> None:
-    admin = make_user("admin@sellphi.dev", is_admin=True)
-    regular = make_user("regular@sellphi.dev")
+    admin = make_user("admin@sellphi.dev", is_admin=True, role="admin")
+    regular = make_user("regular@sellphi.dev", role="sdr")
     app.dependency_overrides[require_admin] = lambda: admin
     app.dependency_overrides[get_auth_service] = lambda: FakeAuthService([admin, regular])
 
@@ -84,3 +104,38 @@ async def test_admin_can_deactivate_a_user(client: AsyncClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_standard_admin_cannot_alter_roles_forbidden(client: AsyncClient) -> None:
+    # A standard admin (role='admin', not super_admin or owner) is forbidden from changing roles
+    standard_admin = make_user("admin@sellphi.dev", is_admin=True, role="admin")
+    target = make_user("target@sellphi.dev", role="sdr")
+    app.dependency_overrides[require_admin] = lambda: standard_admin
+    app.dependency_overrides[get_auth_service] = lambda: FakeAuthService([standard_admin, target])
+
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}",
+        json={"role": "super_admin"},
+    )
+
+    assert response.status_code == 403
+    assert "Super Admins" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_super_admin_can_alter_roles_allowed(client: AsyncClient) -> None:
+    # A super admin can promote a user to admin or super_admin
+    super_admin = make_user("krishnav.vashisht@gmail.com", is_admin=True, role="super_admin")
+    target = make_user("target@sellphi.dev", role="sdr")
+    app.dependency_overrides[require_admin] = lambda: super_admin
+    app.dependency_overrides[get_auth_service] = lambda: FakeAuthService([super_admin, target])
+
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}",
+        json={"role": "admin"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+    assert response.json()["is_admin"] is True

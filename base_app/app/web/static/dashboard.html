@@ -1353,8 +1353,10 @@
       const whoEl = document.getElementById('who');
       const adminLink = document.getElementById('nav-admin-link');
       if (user) {
-        if (whoEl) whoEl.textContent = `${user.email}${user.is_admin ? ' (admin)' : ''}`;
-        if (user.is_admin && adminLink) adminLink.style.display = 'inline-flex';
+        const roleLabel = (user.role || (user.is_admin ? 'admin' : 'sdr')).toUpperCase();
+        if (whoEl) whoEl.textContent = `${user.email} · ${roleLabel}`;
+        const hasAdminAccess = user.is_admin || user.role === 'super_admin' || user.role === 'admin';
+        if (hasAdminAccess && adminLink) adminLink.style.display = 'inline-flex';
       } else {
         if (whoEl) whoEl.textContent = 'Guest / Viewer';
         if (adminLink) adminLink.style.display = 'none';
