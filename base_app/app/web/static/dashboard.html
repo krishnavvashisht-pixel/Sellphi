@@ -1344,29 +1344,26 @@
     document.getElementById('scan-btn').addEventListener('click', scanSignals);
 
     // Initial check
-    if (getAccessToken()) {
-      apiFetch('/auth/me')
-        .then(res => res.ok ? res.json() : null)
-        .then(user => {
-          if (user) {
-            document.getElementById('who').textContent = `${user.email}${user.is_admin ? ' (admin)' : ''}`;
-            initWorkspace();
-          } else {
-            clearTokens();
-            goToLogin();
-          }
-        })
-        .catch(() => {
-          initWorkspace();
-        });
+    (async () => {
+      let user = null;
+      try {
+        user = await requireLogin();
+      } catch (err) {}
 
-      document.getElementById('logout').addEventListener('click', () => {
-        clearTokens();
-        goToLogin();
-      });
-    } else {
-      goToLogin();
-    }
+      if (user) {
+        const whoEl = document.getElementById('who');
+        if (whoEl) whoEl.textContent = `${user.email}${user.is_admin ? ' (admin)' : ''}`;
+      }
+      initWorkspace();
+
+      const logoutBtn = document.getElementById('logout');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          clearTokens();
+          goToLogin();
+        });
+      }
+    })();
   </script>
 </body>
 </html>
