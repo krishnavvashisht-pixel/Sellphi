@@ -75,7 +75,7 @@
         <span class="brand-tag-pill">AI SDR</span>
       </a>
       <a href="/dashboard" class="nav-link active">Radar & Products</a>
-      <a href="/admin" class="nav-link">Admin Console</a>
+      <a href="/admin" class="nav-link" id="nav-admin-link" style="display:none;">Admin Console</a>
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
       <div class="user-pill">
@@ -1350,9 +1350,14 @@
         user = await requireLogin();
       } catch (err) {}
 
+      const whoEl = document.getElementById('who');
+      const adminLink = document.getElementById('nav-admin-link');
       if (user) {
-        const whoEl = document.getElementById('who');
         if (whoEl) whoEl.textContent = `${user.email}${user.is_admin ? ' (admin)' : ''}`;
+        if (user.is_admin && adminLink) adminLink.style.display = 'inline-flex';
+      } else {
+        if (whoEl) whoEl.textContent = 'Guest / Viewer';
+        if (adminLink) adminLink.style.display = 'none';
       }
       initWorkspace();
 

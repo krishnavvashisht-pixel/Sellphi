@@ -65,32 +65,13 @@ async function apiFetch(path, options = {}) {
 }
 
 async function requireLogin() {
-  let token = getAccessToken();
+  const token = getAccessToken();
   if (!token) {
-    try {
-      const demoRes = await fetch(`${API_BASE}/auth/demo-admin`, { method: "POST" });
-      if (demoRes.ok) {
-        const data = await demoRes.json();
-        setTokens(data.access_token, data.refresh_token);
-        token = data.access_token;
-      }
-    } catch (e) {}
+    return null;
   }
-  if (token) {
-    try {
-      const response = await apiFetch("/auth/me");
-      if (response.ok) {
-        return await response.json();
-      }
-      // If token expired, refresh via demo-admin
-      const demoRes = await fetch(`${API_BASE}/auth/demo-admin`, { method: "POST" });
-      if (demoRes.ok) {
-        const data = await demoRes.json();
-        setTokens(data.access_token, data.refresh_token);
-        const retryMe = await apiFetch("/auth/me");
-        if (retryMe.ok) return await retryMe.json();
-      }
-    } catch (e) {}
+  const response = await apiFetch("/auth/me");
+  if (!response.ok) {
+    return null;
   }
-  return { email: "krishnav.vashisht@gmail.com", is_admin: true, id: "admin-self" };
+  return response.json();
 }

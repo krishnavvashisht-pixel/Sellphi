@@ -34,10 +34,11 @@
 
     <div id="message" class="message"></div>
 
-    <div id="denied" class="denied hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:40px; margin-top:30px;">
+    <div id="denied" class="denied hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:40px; margin-top:30px; text-align:center;">
       <div style="font-size:36px; margin-bottom:12px;">🔒</div>
-      <h1 style="font-size:20px;">Access Denied</h1>
-      <p class="subtitle" style="margin-bottom:0;">This console is restricted to administrators. Ask an existing administrator to promote your account if you need access.</p>
+      <h1 style="font-size:20px; margin-bottom:8px;">Access Denied</h1>
+      <p class="subtitle" style="margin-bottom:20px;">This console is restricted to administrators. Only verified workspace admins can manage team members.</p>
+      <a href="/login" style="display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:var(--accent); color:#fff; border-radius:10px; text-decoration:none; font-weight:600; font-size:14px;">Log in as Administrator &rarr;</a>
     </div>
 
     <div style="overflow-x:auto;">
@@ -82,13 +83,29 @@
         const statusBadge = user.is_active
           ? '<span class="badge active"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span> Active</span>'
           : '<span class="badge inactive">Inactive</span>';
-        const roleBadge = user.is_admin
-          ? '<span class="badge admin">Admin</span>'
-          : '<span style="color:var(--muted); font-size:13px;">Member</span>';
 
         const isSelf = user.id === me.id;
+        const isOwner = user.email.toLowerCase() === "krishnav.vashisht@gmail.com";
         const toggleActiveLabel = user.is_active ? "Deactivate" : "Activate";
         const toggleAdminLabel = user.is_admin ? "Remove admin" : "Make admin";
+
+        const roleBadge = isOwner
+          ? '<span class="badge" style="background:linear-gradient(135deg, #6366f1, #a855f7); color:#fff; font-weight:700;">Super Admin</span>'
+          : (user.is_admin
+              ? '<span class="badge admin">Admin</span>'
+              : '<span style="color:var(--muted); font-size:13px;">Member</span>');
+
+        let actionsHtml = "";
+        if (isOwner) {
+          actionsHtml = `<span class="badge" style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.35); color:#a5b4fc; font-weight:600; padding:6px 12px;">👑 Owner (Protected)</span>`;
+        } else if (isSelf) {
+          actionsHtml = `<span style="color:var(--muted); font-size:12.5px; font-style:italic;">Your account (Protected)</span>`;
+        } else {
+          actionsHtml = `
+            <button class="secondary" data-action="toggle-active" data-id="${user.id}" data-value="${!user.is_active}" style="background:rgba(255,255,255,0.04);">${toggleActiveLabel}</button>
+            <button class="secondary" data-action="toggle-admin" data-id="${user.id}" data-value="${!user.is_admin}" style="background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3); color:#a5b4fc;">${toggleAdminLabel}</button>
+          `;
+        }
 
         row.innerHTML = `
           <td>
@@ -97,10 +114,7 @@
           <td>${statusBadge}</td>
           <td>${roleBadge}</td>
           <td style="color:var(--muted); font-size:13px;">${new Date(user.created_at).toLocaleDateString()}</td>
-          <td class="row-actions">
-            <button class="secondary" data-action="toggle-active" data-id="${user.id}" data-value="${!user.is_active}" style="background:rgba(255,255,255,0.04);">${toggleActiveLabel}</button>
-            <button class="secondary" data-action="toggle-admin" data-id="${user.id}" data-value="${!user.is_admin}" style="background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3); color:#a5b4fc;">${toggleAdminLabel}</button>
-          </td>
+          <td class="row-actions">${actionsHtml}</td>
         `;
         body.appendChild(row);
       }
@@ -155,12 +169,16 @@
       try {
         me = await requireLogin();
       } catch (err) {}
-      if (!me) {
-        me = { email: "krishnav.vashisht@gmail.com", is_admin: true, id: "admin-self" };
+      if (!me || !me.is_admin) {
+        document.getElementById("denied").classList.remove("hidden");
+        document.getElementById("users-table").classList.add("hidden");
+        const whoEl = document.getElementById("who");
+        if (whoEl) whoEl.textContent = me ? `${me.email} · guest` : "Restricted";
+        return;
       }
 
       const whoEl = document.getElementById("who");
-      if (whoEl) whoEl.textContent = `${me.email}${me.is_admin ? " · admin" : ""}`;
+      if (whoEl) whoEl.textContent = `${me.email} · admin`;
 
       document.getElementById("users-table").classList.remove("hidden");
       await loadUsers();

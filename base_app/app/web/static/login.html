@@ -147,15 +147,7 @@
 
     const directLink = document.querySelector('a[href="/dashboard"]');
     if (directLink) {
-      directLink.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-          const res = await fetch(`${API_BASE}/auth/demo-admin`, { method: "POST" });
-          if (res.ok) {
-            const data = await res.json();
-            setTokens(data.access_token, data.refresh_token);
-          }
-        } catch (err) {}
+      directLink.addEventListener("click", (e) => {
         window.location.href = "/dashboard";
       });
     }

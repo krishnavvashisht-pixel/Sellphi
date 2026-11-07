@@ -116,6 +116,13 @@ class AuthService:
         if user is None:
             raise UserNotFoundError("No user with that id")
 
+        # Primary workspace owner is permanently protected from deactivation or admin removal
+        if user.email.strip().lower() == "krishnav.vashisht@gmail.com":
+            if is_active is False or is_admin is False:
+                raise CannotRemoveLastAdminError(
+                    "Cannot remove admin or deactivate the primary workspace owner (krishnav.vashisht@gmail.com)"
+                )
+
         would_remove_admin = (is_admin is False and user.is_admin) or (
             is_active is False and user.is_admin and (is_admin is not False)
         )
