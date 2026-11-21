@@ -24,8 +24,12 @@ class InvitationRepository:
         )
         result = await self._session.execute(statement)
         invitation = result.scalar_one_or_none()
-        if invitation and invitation.expires_at < datetime.now(UTC):
-            return None
+        if invitation:
+            exp = invitation.expires_at
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=UTC)
+            if exp < datetime.now(UTC):
+                return None
         return invitation
 
     async def get_by_id(self, invitation_id: UUID) -> AdminInvitation | None:
