@@ -47,6 +47,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                             sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN step3_email TEXT"))
                         if "step4_breakup" not in cols:
                             sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN step4_breakup TEXT"))
+                        if "linkedin_note" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN linkedin_note TEXT"))
+                        if "phone_script" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN phone_script TEXT"))
+                        if "variant_b_subject" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN variant_b_subject TEXT"))
+                        if "variant_b_body" not in cols:
+                            sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN variant_b_body TEXT"))
                         if "tone" not in cols:
                             sync_conn.execute(text("ALTER TABLE opportunities ADD COLUMN tone VARCHAR(50) DEFAULT 'direct'"))
 

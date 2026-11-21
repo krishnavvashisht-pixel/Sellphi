@@ -79,5 +79,10 @@ class OutreachPitchResponse(BaseModel):
     step2_email: str | None = None
     step3_email: str | None = None
     step4_breakup: str | None = None
+    linkedin_note: str | None = None
+    phone_script: str | None = None
+    variant_b_subject: str | None = None
+    variant_b_body: str | None = None
+    step4_breakup: str | None = None
     tone: str = "direct"
 

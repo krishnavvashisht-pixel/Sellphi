@@ -60,6 +60,11 @@ Cadence Instructions:
 6. Step 4 Email (Day 14 - Polite Breakup & Keeping Door Open):
    - Gracefully close the loop without guilt or pressure.
    - State that you assume this isn't a current priority and won't crowd their inbox, while leaving the door open for future needs.
+7. Multi-Channel Touchpoints:
+   - linkedin_note: Write a concise LinkedIn connection request note under 280 characters referencing their milestone (strictly zero sales pitch).
+   - phone_script: Write a 30-second cold call opening script: permission question + hook + low-friction question.
+   - variant_b_subject: An alternative 3-5 word subject line focused on peer storytelling or risk reduction.
+   - variant_b_body: An alternative cold email body (~60-80 words) using a peer story or friction-reduction angle instead of pure ROI.
 """
 
 

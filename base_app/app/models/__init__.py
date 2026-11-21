@@ -6,6 +6,7 @@ Import future model modules here so Alembic autogenerate can discover them.
 from app.models.audit_log import AuditLog
 from app.models.buying_signal import BuyingSignal
 from app.models.company import Company
+from app.models.dnc import DncEntry
 from app.models.event import Event
 from app.models.invitation import AdminInvitation
 from app.models.mission import Mission
@@ -20,6 +21,7 @@ __all__ = [
     "AuditLog",
     "BuyingSignal",
     "Company",
+    "DncEntry",
     "Event",
     "Mission",
     "Opportunity",

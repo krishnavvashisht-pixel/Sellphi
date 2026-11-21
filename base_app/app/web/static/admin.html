@@ -159,6 +159,10 @@
       <a href="/admin" class="nav-link active">Admin Console</a>
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
+      <button class="tag-btn" onclick="document.dispatchEvent(new KeyboardEvent('keydown', {'key':'k','ctrlKey':true}))" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--muted); font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <span>Quick actions...</span>
+        <kbd class="cmd-shortcut-badge" style="font-size:10px;">⌘K</kbd>
+      </button>
       <button class="secondary" id="btn-mfa-modal" type="button" style="width:auto; padding:7px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
         <span>🛡️ Security & MFA</span>
       </button>
@@ -247,6 +251,7 @@
         <button id="tab-users" class="active" type="button">👥 Users & Permissions</button>
         <button id="tab-invites" type="button">✉️ Admin Invitations</button>
         <button id="tab-audits" type="button">📜 Security Audit Trail</button>
+        <button id="tab-dnc" type="button">🚫 Do-Not-Contact (DNC)</button>
       </div>
 
       <!-- TAB 1: USERS & PERMISSIONS -->
@@ -379,6 +384,67 @@
           </div>
         </div>
       </div>
+
+      <!-- TAB 4: DO-NOT-CONTACT (DNC) EXCLUSIONS -->
+      <div id="section-dnc" class="hidden">
+        <div class="invite-panel">
+          <h2 style="margin-top:0; margin-bottom:6px; font-size:17px; display:flex; align-items:center; gap:8px;">
+            <span>🚫 Add Domain to Do-Not-Contact Blacklist</span>
+          </h2>
+          <p class="subtitle" style="margin-bottom:18px;">Prevent autonomous outreach to competitors, current enterprise clients, or opted-out accounts.</p>
+
+          <form id="dnc-form" style="display:grid; grid-template-columns: 2fr 2fr 1.5fr auto; gap:14px; align-items:flex-end;">
+            <div>
+              <label for="dnc-domain" style="font-size:12px;">Domain to Blacklist *</label>
+              <input id="dnc-domain" type="text" placeholder="e.g. competitor.com" required style="margin-bottom:0;" />
+            </div>
+
+            <div>
+              <label for="dnc-company" style="font-size:12px;">Company Name (Optional)</label>
+              <input id="dnc-company" type="text" placeholder="e.g. Competitor Corp" style="margin-bottom:0;" />
+            </div>
+
+            <div>
+              <label for="dnc-reason" style="font-size:12px;">Exclusion Category</label>
+              <select id="dnc-reason" style="margin-bottom:0;">
+                <option value="Competitor" selected>Competitor</option>
+                <option value="Current Customer">Current Customer</option>
+                <option value="Opt-Out">Opt-Out</option>
+                <option value="Partner">Partner</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <button id="dnc-submit" type="submit" style="width:auto; height:44px; white-space:nowrap; padding:0 22px;">
+              + Add to DNC
+            </button>
+          </form>
+        </div>
+
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--border); font-weight:700; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+            <span>Active Blacklisted Domains</span>
+            <span id="dnc-count-badge" class="badge" style="background:rgba(244,63,94,0.15); color:#fb7185;">0 Domains Excluded</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="margin:0; border:none; background:transparent;">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Company</th>
+                  <th>Reason</th>
+                  <th>Added By</th>
+                  <th>Added Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dnc-body">
+                <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">Loading DNC blacklist...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -434,28 +500,34 @@
     const tabUsers = document.getElementById("tab-users");
     const tabInvites = document.getElementById("tab-invites");
     const tabAudits = document.getElementById("tab-audits");
+    const tabDnc = document.getElementById("tab-dnc");
 
     const secUsers = document.getElementById("section-users");
     const secInvites = document.getElementById("section-invites");
     const secAudits = document.getElementById("section-audits");
+    const secDnc = document.getElementById("section-dnc");
 
     function setTab(tab) {
       tabUsers.classList.toggle("active", tab === "users");
       tabInvites.classList.toggle("active", tab === "invites");
       tabAudits.classList.toggle("active", tab === "audits");
+      tabDnc.classList.toggle("active", tab === "dnc");
 
       secUsers.classList.toggle("hidden", tab !== "users");
       secInvites.classList.toggle("hidden", tab !== "invites");
       secAudits.classList.toggle("hidden", tab !== "audits");
+      secDnc.classList.toggle("hidden", tab !== "dnc");
 
       if (tab === "users") loadUsers();
       if (tab === "invites") loadInvitations();
       if (tab === "audits") loadAuditLogs();
+      if (tab === "dnc") loadDncEntries();
     }
 
     tabUsers.addEventListener("click", () => setTab("users"));
     tabInvites.addEventListener("click", () => setTab("invites"));
     tabAudits.addEventListener("click", () => setTab("audits"));
+    tabDnc.addEventListener("click", () => setTab("dnc"));
 
     // Render Users Table
     function renderUsers(users) {
@@ -763,6 +835,101 @@
 
     document.getElementById("btn-refresh-audits").addEventListener("click", () => {
       loadAuditLogs();
+    });
+
+    // TAB 4: DO-NOT-CONTACT (DNC) LOGIC
+    async function loadDncEntries() {
+      const body = document.getElementById("dnc-body");
+      const response = await apiFetch("/admin/dnc");
+      if (!response.ok) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--danger);">Failed to load DNC entries.</td></tr>';
+        return;
+      }
+
+      const entries = await response.json();
+      const countBadge = document.getElementById("dnc-count-badge");
+      if (countBadge) countBadge.textContent = `${entries.length} Domains Excluded`;
+
+      if (entries.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">No domains blacklisted yet. Add competitors or clients above.</td></tr>';
+        return;
+      }
+
+      body.innerHTML = "";
+      for (const e of entries) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td style="font-weight:600; color:var(--text);">${e.domain}</td>
+          <td style="color:#cbd5e1;">${e.company_name || "—"}</td>
+          <td><span class="badge" style="background:rgba(244,63,94,0.15); color:#fb7185;">${e.reason || "Competitor"}</span></td>
+          <td style="color:var(--muted); font-size:12px;">${e.added_by || "—"}</td>
+          <td style="color:var(--muted); font-size:12px;">${new Date(e.created_at).toLocaleDateString()}</td>
+          <td class="row-actions">
+            <button class="secondary" data-action="delete-dnc" data-id="${e.id}" style="color:#fb7185; border-color:rgba(244,63,94,0.3); font-size:12px; padding:5px 10px; width:auto;">Remove</button>
+          </td>
+        `;
+        body.appendChild(row);
+      }
+    }
+
+    // Add DNC Form Listener
+    document.getElementById("dnc-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessage();
+
+      const domain = document.getElementById("dnc-domain").value.trim();
+      const company = document.getElementById("dnc-company").value.trim();
+      const reason = document.getElementById("dnc-reason").value;
+      const submitBtn = document.getElementById("dnc-submit");
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Adding...";
+
+      try {
+        const response = await apiFetch("/admin/dnc", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain, company_name: company || null, reason }),
+        });
+
+        if (!response.ok) {
+          const problem = await response.json().catch(() => ({}));
+          showMessage(problem.detail || "Could not add domain to DNC.", "error");
+          return;
+        }
+
+        document.getElementById("dnc-domain").value = "";
+        document.getElementById("dnc-company").value = "";
+        showMessage(`Domain ${domain} added to Do-Not-Contact blacklist.`, "success");
+        await loadDncEntries();
+      } catch (err) {
+        showMessage("Failed to connect to server.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "+ Add to DNC";
+      }
+    });
+
+    // Delete DNC Button Listener
+    document.getElementById("dnc-body").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action='delete-dnc']");
+      if (!btn) return;
+
+      const dncId = btn.dataset.id;
+      clearMessage();
+
+      const response = await apiFetch(`/admin/dnc/${dncId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        showMessage(problem.detail || "Could not remove domain from DNC.", "error");
+        return;
+      }
+
+      showMessage("Domain removed from Do-Not-Contact blacklist.", "success");
+      await loadDncEntries();
     });
 
     // MFA MODAL LOGIC

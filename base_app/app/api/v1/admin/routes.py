@@ -7,9 +7,11 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.dependencies import CurrentAdminDep, CurrentSuperAdminDep, DbSessionDep
 from app.api.v1.auth.routes import AuthServiceDep
 from app.models.audit_log import AuditLog
+from app.models.dnc import DncEntry
 from app.models.invitation import AdminInvitation
 from app.models.user import UserRole
 from app.repositories.audit_log import AuditLogRepository
+from app.repositories.dnc import DncRepository
 from app.repositories.invitation import InvitationRepository
 from app.schemas.auth import (
     AdminUserUpdate,
@@ -18,6 +20,7 @@ from app.schemas.auth import (
     InvitationPublic,
     UserPublic,
 )
+from app.schemas.dnc import DncCreate, DncResponse
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -157,3 +160,87 @@ async def list_audit_logs(
     audit_repo = AuditLogRepository(db_session)
     logs = await audit_repo.list_recent(limit=100)
     return [AuditLogPublic.model_validate(log) for log in logs]
+
+
+@router.get("/dnc", response_model=list[DncResponse])
+async def list_dnc_entries(
+    db_session: DbSessionDep,
+    _admin: CurrentAdminDep,
+) -> list[DncResponse]:
+    """List all Do-Not-Contact (DNC) blacklisted domains."""
+    dnc_repo = DncRepository(db_session)
+    entries = await dnc_repo.list_all()
+    return [DncResponse.model_validate(e) for e in entries]
+
+
+@router.post("/dnc", response_model=DncResponse, status_code=status.HTTP_201_CREATED)
+async def add_dnc_entry(
+    payload: DncCreate,
+    db_session: DbSessionDep,
+    _admin: CurrentAdminDep,
+) -> DncResponse:
+    """Add a domain to the Do-Not-Contact blacklist."""
+    dnc_repo = DncRepository(db_session)
+    clean_domain = payload.domain.lower().strip().replace("https://", "").replace("http://", "").split("/")[0]
+
+    existing = await dnc_repo.get_by_domain(clean_domain)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Domain {clean_domain} is already on the Do-Not-Contact list.",
+        )
+
+    entry = DncEntry(
+        domain=clean_domain,
+        company_name=payload.company_name,
+        reason=payload.reason,
+        added_by=_admin.email,
+    )
+    created = await dnc_repo.create(entry)
+
+    audit_repo = AuditLogRepository(db_session)
+    await audit_repo.create(
+        AuditLog(
+            actor_id=_admin.id,
+            actor_email=_admin.email,
+            action="add_dnc_entry",
+            target_email=clean_domain,
+            new_value=payload.reason,
+            details=f"Added {clean_domain} to Do-Not-Contact list ({payload.reason})",
+        )
+    )
+    await dnc_repo.commit()
+    return DncResponse.model_validate(created)
+
+
+@router.delete("/dnc/{dnc_id}")
+async def delete_dnc_entry(
+    dnc_id: UUID,
+    db_session: DbSessionDep,
+    _admin: CurrentAdminDep,
+) -> dict[str, str]:
+    """Remove a domain from the Do-Not-Contact blacklist."""
+    dnc_repo = DncRepository(db_session)
+    entry = await dnc_repo.get_by_id(dnc_id)
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="DNC entry not found",
+        )
+
+    domain = entry.domain
+    await dnc_repo.delete(entry)
+
+    audit_repo = AuditLogRepository(db_session)
+    await audit_repo.create(
+        AuditLog(
+            actor_id=_admin.id,
+            actor_email=_admin.email,
+            action="remove_dnc_entry",
+            target_email=domain,
+            details=f"Removed {domain} from Do-Not-Contact list",
+        )
+    )
+    await dnc_repo.commit()
+    return {"message": f"Domain {domain} removed from Do-Not-Contact list"}
+
