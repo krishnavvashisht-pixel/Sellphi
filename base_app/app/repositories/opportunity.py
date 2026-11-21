@@ -41,6 +41,10 @@ class OpportunityRepository:
                 existing.follow_up_email = payload.follow_up_email
                 existing.step3_email = payload.step3_email or existing.step3_email
                 existing.step4_breakup = payload.step4_breakup or existing.step4_breakup
+                existing.linkedin_note = payload.linkedin_note or existing.linkedin_note
+                existing.phone_script = payload.phone_script or existing.phone_script
+                existing.variant_b_subject = payload.variant_b_subject or existing.variant_b_subject
+                existing.variant_b_body = payload.variant_b_body or existing.variant_b_body
                 existing.tone = payload.tone or existing.tone
             await self.session.commit()
             await self.session.refresh(existing)
@@ -61,6 +65,10 @@ class OpportunityRepository:
             follow_up_email=payload.follow_up_email,
             step3_email=payload.step3_email,
             step4_breakup=payload.step4_breakup,
+            linkedin_note=payload.linkedin_note,
+            phone_script=payload.phone_script,
+            variant_b_subject=payload.variant_b_subject,
+            variant_b_body=payload.variant_b_body,
             tone=payload.tone or "direct",
             status=payload.status,
             notes=payload.notes,

@@ -222,19 +222,35 @@ async def scan_signals(payload: SignalScanRequest) -> list[SignalItemResponse]:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch news feed: {exc}") from exc
 
-    # Filter noise and deduplicate candidate headlines so Gemini evaluates diverse companies
-    candidates = deduplicate_raw_items(raw_items, max_candidates=max(payload.limit * 3, 20))
+    # Filter noise and deduplicate candidate headlines for diverse companies
+    max_candidates = min(len(raw_items), max(payload.limit * 2, 6))
+    candidates = deduplicate_raw_items(raw_items, max_candidates=max_candidates)
     if not candidates and raw_items:
         candidates = raw_items[: payload.limit]
 
     active_mission = resolve_mission_for_product(payload)
+
+    # Concurrently classify candidate items using asyncio.gather for fast (<3-5s) responses on serverless
+    async def _safe_classify(item):
+        try:
+            classification = await asyncio.wait_for(
+                classify_signal(item, active_mission),
+                timeout=12.0
+            )
+            return (item, classification)
+        except Exception:
+            return (item, None)
+
+    classified_pairs = await asyncio.gather(*[_safe_classify(item) for item in candidates])
+
     results: list[SignalItemResponse] = []
     seen_companies: set[str] = set()
     has_generic_discarded = False
 
-    for item in candidates:
+    for item, classification in classified_pairs:
+        if classification is None:
+            continue
         try:
-            classification = await classify_signal(item, active_mission)
             norm_company = normalize_company_name(classification.company_name)
 
             # Deduplicate by company name so the user gets distinct corporate accounts
@@ -271,11 +287,7 @@ async def scan_signals(payload: SignalScanRequest) -> list[SignalItemResponse]:
 
             if len(results) >= payload.limit:
                 break
-
-            # Short courtesy pause between requests
-            await asyncio.sleep(0.3)
         except Exception:
-            # Continue on individual classification failure rather than failing the whole batch
             continue
 
     return results

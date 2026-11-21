@@ -110,9 +110,10 @@ class AuthService:
 
     def issue_tokens(self, user: User) -> TokenPair:
         subject = str(user.id)
+        claims = {"email": user.email, "role": user.role}
         return TokenPair(
-            access_token=create_access_token(subject),
-            refresh_token=create_refresh_token(subject),
+            access_token=create_access_token(subject, additional_claims=claims),
+            refresh_token=create_refresh_token(subject, additional_claims=claims),
         )
 
     async def refresh(self, refresh_token: str) -> TokenPair:

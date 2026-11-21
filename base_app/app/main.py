@@ -90,7 +90,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                             {"email": "krishnav.vashisht@gmail.com", "pwd": pwd_hash}
                         )
                     else:
-                        uid = str(uuid.uuid4())
+                        uid = str(uuid.uuid5(uuid.NAMESPACE_DNS, "krishnav.vashisht@gmail.com"))
                         sync_conn.execute(
                             text("INSERT INTO users (id, email, hashed_password, is_admin, is_active, role) VALUES (:id, :email, :pwd, 1, 1, 'super_admin')"),
                             {"id": uid, "email": "krishnav.vashisht@gmail.com", "pwd": pwd_hash}
