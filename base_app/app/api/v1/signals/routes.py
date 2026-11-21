@@ -235,7 +235,7 @@ async def scan_signals(payload: SignalScanRequest) -> list[SignalItemResponse]:
         try:
             classification = await asyncio.wait_for(
                 classify_signal(item, active_mission),
-                timeout=12.0
+                timeout=28.0
             )
             return (item, classification)
         except Exception:
